@@ -17,7 +17,7 @@ import java.util.Map;
  */
 final class Settings {
     static final String FILE_NAME = "settings.json";
-    private static final int VERSION = 3;
+    private static final int VERSION = 4;
 
     /** Actions whose id changed between settings versions: their saved keys move to the new id. */
     private static final Map<Integer, Map<String, String>> RENAMED = Map.of(
@@ -31,7 +31,9 @@ final class Settings {
             1, Map.of(
                     "node.new", List.of(),
                     "node.duplicate", List.of(),
-                    "node.resize", List.of()));
+                    "node.resize", List.of()),
+            3, Map.of(
+                    "node.edit", List.of()));
 
     private final Path primary;
     private Path loadedFrom;

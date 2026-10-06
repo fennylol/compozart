@@ -50,14 +50,18 @@ The right column shows the composed render and the palette.
 - Double-click an anchor to jump to its settings and type its target. The panel's Open button opens or creates the node it attaches.
 - Use `[` and `]` to show a parent faded behind the node, placed through the anchor.
 - Duplicate a node to make a variant. Anchors pick a random variant unless one is pinned.
+- New in the library adds a node, a folder, or an imported image. Rename (F2) works on both nodes and folders.
+- Importing an image can add its colors to the palette or snap them to the colors already there.
 - File nodes in folders to keep the library tidy. Drag nodes and folders around, or right-click for Move to. Folders never change how the creature is built.
 
+Hover any tool or library icon for its name and key. The panel under the node library explains the current tool.
 Every shortcut can be changed in Edit > Keyboard shortcuts, or in `settings.json` next to the program.
 The app rereads that file when its window regains focus.
 
 ## Files
 
 Projects save as `.zart` files, which are plain JSON.
-Exports are a flat indexed PNG, a zip of indexed PNGs with one per layer, or an indexed `.aseprite` file with one layer per creature layer.
+Exports are a flat indexed PNG, a zip of indexed PNGs with one per layer, an indexed `.aseprite` file with one layer per creature layer, or a Godot 4 scene.
+The Godot scene comes in 2D (`Sprite2D`) or 3D (`Sprite3D`). Each part sits on a pivot at its joint, so it can be animated by rotating that pivot.
 
 Created with Claude Opus 5.5

@@ -39,10 +39,13 @@ final class NodeLibrary extends JPanel {
     private Node lastSynced;
     private boolean syncing;
 
-    NodeLibrary(Editor ed, NodeActions actions) {
+    private final java.util.function.Function<String, String> keyHint;
+
+    NodeLibrary(Editor ed, NodeActions actions, java.util.function.Function<String, String> keyHint) {
         super(new BorderLayout());
         this.ed = ed;
         this.actions = actions;
+        this.keyHint = keyHint;
         actions.setFolderSource(this::currentFolder);
         JLabel title = new JLabel("Node library");
         title.setFont(title.getFont().deriveFont(Font.BOLD));
@@ -50,15 +53,16 @@ final class NodeLibrary extends JPanel {
 
         JToolBar bar = new JToolBar();
         bar.setFloatable(false);
-        bar.add(button("+", "New node in the selected folder", () -> actions.create(null)));
-        bar.add(button("Folder", "New folder inside the selected folder", this::newFolder));
-        bar.add(button("Dup", "Duplicate as a new variant", actions::duplicate));
-        bar.add(button("Edit", "Rename the node or folder", this::editSelected));
-        bar.add(button("Size", "Resize", actions::resize));
-        bar.add(button("Root", "Set as creature root", () -> actions.setRoot(ed.node())));
-        bar.add(button("▲", "Move up within its folder", () -> actions.move(-1)));
-        bar.add(button("▼", "Move down within its folder", () -> actions.move(1)));
-        bar.add(button("Del", "Delete the node or folder", this::deleteSelected));
+        JButton newButton = button("new", "New node, folder or imported image, in the selected folder", null, () -> { });
+        newButton.addActionListener(e -> newMenu().show(newButton, 0, newButton.getHeight()));
+        bar.add(newButton);
+        bar.add(button("rename", "Rename the selected node or folder", "node.edit", this::renameSelected));
+        bar.add(button("duplicate", "Duplicate the node as a new variant", "node.duplicate", actions::duplicate));
+        bar.add(button("resize", "Resize the node", "node.resize", actions::resize));
+        bar.add(button("root", "Make the node the creature root", "node.root", () -> actions.setRoot(ed.node())));
+        bar.add(button("up", "Move up within its folder", null, () -> actions.move(-1)));
+        bar.add(button("down", "Move down within its folder", null, () -> actions.move(1)));
+        bar.add(button("delete", "Delete the node or folder", "node.delete", this::deleteSelected));
 
         JPanel north = new JPanel(new BorderLayout());
         north.add(title, BorderLayout.NORTH);
@@ -117,10 +121,18 @@ final class NodeLibrary extends JPanel {
         refresh();
     }
 
-    private static JButton button(String text, String tip, Runnable r) {
-        JButton b = new JButton(text);
-        b.setToolTipText(tip);
-        b.setMargin(new Insets(1, 4, 1, 4));
+    /** An icon button whose tooltip names the action and, when it has one, its current key. */
+    private JButton button(String icon, String tip, String actionId, Runnable r) {
+        JButton b = new JButton(PixelIcon.of(icon)) {
+            @Override
+            public String getToolTipText(MouseEvent e) {
+                String k = actionId == null ? "" : keyHint.apply(actionId);
+                return k.isEmpty() ? tip : tip + " (" + k + ")";
+            }
+        };
+        ToolTipManager.sharedInstance().registerComponent(b);
+        b.getAccessibleContext().setAccessibleName(tip);
+        b.setMargin(new Insets(2, 3, 2, 3));
         b.addActionListener(e -> r.run());
         return b;
     }
@@ -151,6 +163,21 @@ final class NodeLibrary extends JPanel {
     private void newFolderIn(String parent) {
         String path = actions.newFolder(parent);
         if (path != null) selectFolder(path);
+    }
+
+    /** The New button's menu: everything that can be created goes in the selected folder. */
+    private JPopupMenu newMenu() {
+        String here = currentFolder();
+        JPopupMenu m = new JPopupMenu();
+        m.add(item("Node" + in(here) + "\u2026", () -> actions.create(null)));
+        m.add(item("Folder" + in(here) + "\u2026", () -> newFolderIn(here)));
+        m.add(item("Import image" + in(here) + "\u2026", actions::importImages));
+        return m;
+    }
+
+    /** Renames the selected folder, or the node being edited when no folder is selected. */
+    void renameSelected() {
+        editSelected();
     }
 
     private void editSelected() {
@@ -196,10 +223,11 @@ final class NodeLibrary extends JPanel {
         JPopupMenu m = new JPopupMenu();
         m.add(item("New node" + in(here) + "…", () -> actions.create(null)));
         m.add(item("New folder" + in(here) + "…", () -> newFolderIn(here)));
+        m.add(item("Import image" + in(here) + "\u2026", actions::importImages));
         if (row instanceof NodeRow r) {
             m.addSeparator();
             m.add(item("Duplicate as new variant", actions::duplicate));
-            m.add(item("Edit name and variant…", actions::edit));
+            m.add(item("Rename\u2026", actions::edit));
             m.add(item("Resize…", actions::resize));
             m.add(item("Set as root", () -> actions.setRoot(r.node())));
             m.add(moveMenu(null, r.node()));

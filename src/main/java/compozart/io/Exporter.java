@@ -19,7 +19,9 @@ public final class Exporter {
     public enum Format {
         FLAT_PNG("Flat PNG", ".png"),
         LAYER_ZIP("Layer zip", ".zip"),
-        ASEPRITE("Aseprite", ".aseprite");
+        ASEPRITE("Aseprite", ".aseprite"),
+        GODOT_2D("Godot 2D scene", ".tscn"),
+        GODOT_3D("Godot 3D scene", ".tscn");
 
         public final String label, extension;
 
@@ -29,7 +31,16 @@ public final class Exporter {
         }
 
         public boolean scalable() {
-            return this != ASEPRITE;
+            return this == FLAT_PNG || this == LAYER_ZIP;
+        }
+
+        /** Image formats crop to the creature and take padding; scenes keep every part as its own sprite. */
+        public boolean padded() {
+            return !godot();
+        }
+
+        public boolean godot() {
+            return this == GODOT_2D || this == GODOT_3D;
         }
     }
 
@@ -51,7 +62,15 @@ public final class Exporter {
             }
             case LAYER_ZIP -> layerZip(c, palette, padding, scale);
             case ASEPRITE -> aseprite(c, palette, padding);
+            case GODOT_2D, GODOT_3D -> godot(format, c, palette, GodotScene.DEFAULT_PIXEL_SIZE);
         };
+    }
+
+    /** A Godot scene as UTF-8 text. {@code pixelSize} is 3D units per pixel and only matters for the 3D scene. */
+    public static byte[] godot(Format format, Composition c, Palette palette, double pixelSize) {
+        if (!format.godot()) throw new IllegalArgumentException(format + " is not a Godot format");
+        if (pixelSize <= 0) throw new IllegalArgumentException("pixel size must be positive");
+        return GodotScene.write(c, palette, format == Format.GODOT_3D, pixelSize).getBytes(java.nio.charset.StandardCharsets.UTF_8);
     }
 
     public static String layerName(int shiftedLayer) {

@@ -42,25 +42,30 @@ final class AnchorPanel extends JPanel {
     private final Map<Dir, JToggleButton> namedDirs = new EnumMap<>(Dir.class);
     private final Map<Dir, JToggleButton> rootDirs = new EnumMap<>(Dir.class);
 
-    AnchorPanel(Editor ed, AnchorMenus menus) {
+    private final java.util.function.Function<String, String> keyHint;
+    private final JLabel help = new JLabel();
+    private final JScrollPane scroll;
+
+    AnchorPanel(Editor ed, AnchorMenus menus, java.util.function.Function<String, String> keyHint) {
         super(new BorderLayout());
         this.ed = ed;
         this.menus = menus;
+        this.keyHint = keyHint;
         title.setFont(title.getFont().deriveFont(Font.BOLD));
         title.setBorder(BorderFactory.createEmptyBorder(6, 8, 4, 8));
         add(title, BorderLayout.NORTH);
-        add(new JScrollPane(body, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER) {{
-            setBorder(null);
-        }}, BorderLayout.CENTER);
+        scroll = new JScrollPane(body, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.setBorder(null);
+        add(scroll, BorderLayout.CENTER);
+        // The tool help wraps to the panel's width, so rewrap when the panel is resized.
+        scroll.getViewport().addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                refreshHelp();
+            }
+        });
 
-        JLabel help = new JLabel("<html>Anchor tool (A): drag from a pixel to add<br>an anchor aimed at the cursor. "
-                + "Shift for the<br>root anchor. Right-click erases an anchor.<br>"
-                + "Drag an anchor to move it, arrow keys to point.<br>"
-                + "Draw tool: right-drag adds an anchor.<br>"
-                + "Eraser: right-click erases anchors.<br>"
-                + "Double-click an anchor to edit its settings.</html>");
-        help.setForeground(Draw.MUTED);
         help.setVerticalAlignment(SwingConstants.TOP);
         help.setBorder(BorderFactory.createEmptyBorder(4, 8, 8, 8));
         body.add(help, "none");
@@ -306,6 +311,17 @@ final class AnchorPanel extends JPanel {
 
     // ---- refresh ----
 
+    /** Shows the current tool's name, key and instructions, wrapped to the panel. Called again after keys change. */
+    void refreshHelp() {
+        if (ed.node() != null && ed.anchor() != Editor.NO_ANCHOR) return;
+        Tool t = ed.tool();
+        title.setText(ToolHelp.title(t, keyHint));
+        title.setIcon(PixelIcon.of(t.icon));
+        // leave room for the vertical scrollbar, which appears once the text is long enough to need it
+        int width = Math.max(120, scroll.getViewport().getWidth() - scroll.getVerticalScrollBar().getPreferredSize().width - 24);
+        help.setText(ToolHelp.html(t, keyHint, width));
+    }
+
     private void refresh() {
         NamedAnchor now = selected();
         if (shown != null && now != shown) {
@@ -318,8 +334,9 @@ final class AnchorPanel extends JPanel {
             shown = now;
             Node n = ed.node();
             int sel = ed.anchor();
+            title.setIcon(null);
             if (n == null || sel == Editor.NO_ANCHOR) {
-                title.setText("Anchor");
+                refreshHelp();
                 cards.show(body, "none");
             } else if (sel == Editor.ROOT_ANCHOR) {
                 title.setText("Root anchor");

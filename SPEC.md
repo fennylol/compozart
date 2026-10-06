@@ -219,6 +219,10 @@ Cycles are allowed, for example a "tail" node with its own "tail" anchor.
 The window shows the tree on the left, the canvas in the center, the render on the right, and the palette along one edge.
 The dividers between them can be dragged.
 
+- Tool buttons and library buttons are pixel-art icons. Hovering one shows its name and its current key.
+- The panel under the node library shows the selected anchor's settings. With no anchor selected, it shows the current tool, its key, and everything specific to that tool, written with the user's current key bindings.
+- Key names show punctuation as the character itself, such as `[` rather than "Open Bracket".
+
 ### Canvas view
 
 The canvas view edits the selected node.
@@ -233,6 +237,7 @@ The canvas view edits the selected node.
 - A moved selection floats until you deselect, switch tools or switch nodes. Clear pixels in it do not overwrite.
 - Ctrl+dragging a selection moves a copy and leaves the original in place. Ctrl+dragging a floating selection stamps it where it is and drags off another copy. Undo returns to before the first lift.
 - Anchor tool: click an empty pixel to add a named anchor, Shift+click to place or move the root anchor. Press on an existing anchor and drag to move it. Arrow keys point the selected anchor and Delete removes it. Right-click erases the anchor under the cursor; right-dragging erases every anchor along the path, as one undo step.
+- On a node with no anchors at all, the first anchor added becomes its root anchor. The creature root is the exception, since it ignores its root anchor; its first anchor stays a named anchor.
 - Adding an anchor, with either tool, is a press and drag. The anchor sits on the pixel where the press started and points toward the cursor, in whichever of the four directions is closest. Releasing without leaving the pixel keeps the default: up for a named anchor, the previous direction (or down) for the root anchor. Adding and aiming are one undo step.
 - Symmetry modes for the drawing tools: none, left/right, top/bottom, quad, diagonal `\`, diagonal `/`. The mirror axes go through the canvas center.
 - Double-clicking an anchor with the anchor tool selects it and moves the keyboard into its settings: the target name for a named anchor, the direction buttons for the root anchor.
@@ -264,10 +269,23 @@ The node library lists every node, attached or not, filed in folders:
 - Folders nest to any depth. Each folder shows how many nodes it holds, counting subfolders.
 - Folders only organize the library. Anchors match nodes by name wherever they are filed, so refiling a node never changes the creature.
 - A folder lists its subfolders first, in name order, then its own nodes in the order you set. Moving a node up or down stays within its folder.
-- New nodes and folders go into the selected folder, or the selected node's folder.
+- The library's New button offers a node, a folder, or an imported image. Each goes into the selected folder, or the selected node's folder.
+- Rename (also F2, or double-clicking a node) renames the selected folder, or the selected node's name and variant.
 - Drag a node or folder onto a folder to move it there, or onto empty space to move it to the top level. Right-click offers the same as a Move to menu.
 - Renaming a folder carries its contents along. Moving a folder where one of the same name exists merges the two.
 - Deleting a folder keeps its contents: its nodes and subfolders move up one level.
+
+#### Importing images
+
+- Node > Import image (or New > Import image) turns one or more image files into nodes. PNG, GIF, BMP and JPEG are read.
+- A single image can be named in the dialog; several images are named after their files. A name that is taken becomes a new variant.
+- Images up to 256 pixels on their longer side are accepted. Non-square images are centered on a square canvas, leaning toward (0, 0).
+- Pixels with alpha below 8 become clear. Other alpha is kept.
+- Two color modes:
+  - **Add new colors** (default): colors already in the palette are reused, and new ones are appended, most used first, until the palette is full. The rest use the nearest color.
+  - **Match the existing palette**: the palette is left alone and every pixel uses the nearest color.
+- Nearest means the smallest difference in OKLab, with alpha counted. The dialog shows how many colors each image has and how many are already in the palette, and reports afterwards how many pixels were approximated.
+- An import is one undo step, palette changes included. The new nodes get a centered root anchor unless that option is turned off.
 - New nodes get a root anchor on the middle pixel, pointing down, unless that option is turned off. On even sizes the middle leans toward (0, 0): pixel (15, 15) on a 32×32 node.
 - Duplicating a node creates a new variant of the same name.
 - Renaming a node offers to update the anchors that target the old name, when no other node keeps that name.
@@ -320,6 +338,7 @@ Plain keys are ignored while a text field has focus, so typing a name never swit
 | New node | `Shift+A` |
 | Duplicate node as a new variant | `Shift+D` |
 | Resize node | `Ctrl+R` |
+| Rename node or folder | `F2` |
 | Zoom in / out / fit | `=` / `-` / `0` |
 | Smaller / larger brush | `Shift+[` / `Shift+]`, or Ctrl+wheel over the canvas |
 | Previous / next color | `,` / `.` |
@@ -351,6 +370,12 @@ PNG exports have an optional integer scale.
 - **Flat PNG**: one indexed PNG of the whole creature. It carries the full palette, with alpha per entry.
 - **Layer zip**: one indexed PNG per layer, named `layer_00.png`, `layer_01.png`, and so on, all the same size so they line up. Only non-empty layers are written.
 - **Aseprite**: one `.aseprite` file in indexed color mode, with index 0 as the transparent color, the full palette, one frame, and one Aseprite layer per creature layer.
+- **Godot scene**: one `.tscn` file for Godot 4, in a 2D or a 3D flavor, with textures embedded so it needs no other files.
+  - The creature's root node is the scene root. Every attached part is a pivot node placed on its joint, the middle of the pixel edge where its root anchor meets the parent's anchor. Rotating a pivot swings the part and everything attached to it around that joint.
+  - Each pivot holds the part's sprite, named `Sprite`. Rotation and mirroring live on the pivot; a mirror is written as `scale.x = -1`. Pivots are named after their nodes (variant appended), made unique among siblings, with characters Godot forbids replaced by `_`.
+  - 2D: `Node2D` pivots and `Sprite2D` sprites with nearest filtering. Each sprite's `z_index` is its creature layer (absolute), and tree order settles ties, as in the render view.
+  - 3D: `Node3D` pivots and `Sprite3D` sprites with nearest filtering and alpha cut. Pixels map to x right and y up at a chosen pixel size (default 0.01 units). Parts are spaced 0.0005 units apart in depth, in draw order, so overlapping sprites do not flicker.
+  - The scene captures the creature as currently composed, including its random variant picks. Padding and scale do not apply.
 
 Layer numbers are shifted so the lowest layer becomes 0.
 Everything on a given layer goes into the same exported layer, whatever node drew it.

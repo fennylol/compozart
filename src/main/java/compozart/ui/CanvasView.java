@@ -801,6 +801,8 @@ final class CanvasView extends JComponent {
      */
     private boolean startAim(Node n, Point p, boolean root) {
         if (!n.contains(p.x, p.y)) return false;
+        // A node's first anchor is its plug. The creature root is the exception: it ignores its root anchor.
+        if (n.root == null && n.anchors.isEmpty() && !n.ref().equals(ed.project().root)) root = true;
         if (root) {
             ed.edit(null, () -> n.root = n.root == null ? new RootAnchor(p.x, p.y, Dir.S) : n.root.at(p.x, p.y));
             ed.selectAnchor(Editor.ROOT_ANCHOR);

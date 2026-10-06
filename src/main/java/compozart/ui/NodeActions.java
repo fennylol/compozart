@@ -4,7 +4,10 @@ import compozart.model.*;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /** Node library commands: create, duplicate, edit, resize, delete, reorder, set as root. */
 final class NodeActions {
@@ -83,7 +86,7 @@ final class NodeActions {
         JTextField varF = new JTextField(n.variant, 16);
         JPanel form = form(new String[]{"Name", "Variant"}, nameF, varF);
         while (true) {
-            if (!ask("Edit node", form, nameF)) return;
+            if (!ask("Rename node", form, nameF)) return;
             String name = nameF.getText().trim(), variant = varF.getText().trim();
             String err = validate(name, variant, n);
             if (err != null) {
@@ -188,6 +191,153 @@ final class NodeActions {
             nodes.set(j, n);
         });
         ed.selectNode(n);
+    }
+
+    // ---- importing images ----
+
+    private java.nio.file.Path importDir;
+
+    /** Asks for one or more images and adds each as a node in the current folder. */
+    void importImages() {
+        Window w = SwingUtilities.getWindowAncestor(parent);
+        FileDialog fd = new FileDialog(w instanceof Frame f ? f : null, "Import image as node", FileDialog.LOAD);
+        fd.setMultipleMode(true);
+        if (importDir != null) fd.setDirectory(importDir.toString());
+        Set<String> suffixes = new HashSet<>();
+        for (String s : javax.imageio.ImageIO.getReaderFileSuffixes()) suffixes.add(s.toLowerCase(java.util.Locale.ROOT));
+        fd.setFilenameFilter((dir, name) -> {
+            int dot = name.lastIndexOf('.');
+            return dot > 0 && suffixes.contains(name.substring(dot + 1).toLowerCase(java.util.Locale.ROOT))
+                    || new java.io.File(dir, name).isDirectory();
+        });
+        fd.setVisible(true);
+        java.io.File[] files = fd.getFiles();
+        if (files == null || files.length == 0) return;
+        importDir = files[0].toPath().toAbsolutePath().getParent();
+
+        List<java.io.File> ok = new ArrayList<>();
+        List<java.awt.image.BufferedImage> images = new ArrayList<>();
+        StringBuilder problems = new StringBuilder();
+        for (java.io.File f : files) {
+            try {
+                java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(f);
+                if (img == null) problems.append(f.getName()).append(": not a readable image\n");
+                else if (Math.max(img.getWidth(), img.getHeight()) > Node.MAX_SIZE) {
+                    problems.append(f.getName()).append(": ").append(img.getWidth()).append("\u00d7").append(img.getHeight())
+                            .append(" is larger than ").append(Node.MAX_SIZE).append("\u00d7").append(Node.MAX_SIZE).append("\n");
+                } else {
+                    ok.add(f);
+                    images.add(img);
+                }
+            } catch (java.io.IOException e) {
+                problems.append(f.getName()).append(": ").append(e.getMessage()).append("\n");
+            }
+        }
+        if (!problems.isEmpty()) {
+            JOptionPane.showMessageDialog(parent, (ok.isEmpty() ? "" : "These files will be skipped:\n") + problems,
+                    "Import image", JOptionPane.WARNING_MESSAGE);
+        }
+        if (ok.isEmpty()) return;
+        importDialog(ok, images);
+    }
+
+    private void importDialog(List<java.io.File> files, List<java.awt.image.BufferedImage> images) {
+        boolean single = files.size() == 1;
+        String base = baseName(files.get(0).getName());
+        JTextField nameF = new JTextField(base, 16);
+        JTextField varF = new JTextField(p().find(base, "") == null ? "" : p().uniqueVariant(base, "import"), 16);
+
+        StringBuilder stats = new StringBuilder("<html>");
+        int fresh = 0;
+        for (int i = 0; i < files.size() && i < 12; i++) {
+            compozart.io.ImageImport.Analysis a = compozart.io.ImageImport.analyze(images.get(i), p().palette);
+            fresh += a.fresh();
+            stats.append(escape(files.get(i).getName())).append(" \u00b7 ").append(a.width()).append("\u00d7").append(a.height())
+                    .append(" \u00b7 ").append(a.colors()).append(a.colors() == 1 ? " color" : " colors")
+                    .append(", ").append(a.inPalette()).append(" already in the palette<br>");
+        }
+        if (files.size() > 12) stats.append("and ").append(files.size() - 12).append(" more<br>");
+        int room = Palette.MAX - p().palette.size();
+        stats.append("The palette has room for ").append(room).append(room == 1 ? " more color." : " more colors.");
+        if (fresh > room) stats.append("<br>Colors that do not fit use the nearest palette color.");
+        stats.append("</html>");
+
+        JRadioButton add = new JRadioButton("Add new colors to the palette", true);
+        add.setToolTipText("Keeps the image's colors exactly while there is room in the palette");
+        JRadioButton nearest = new JRadioButton("Match the existing palette");
+        nearest.setToolTipText("Leaves the palette alone; every pixel uses the closest palette color");
+        ButtonGroup bg = new ButtonGroup();
+        bg.add(add);
+        bg.add(nearest);
+        JCheckBox root = new JCheckBox("Add a root anchor (center, pointing down)", true);
+
+        JPanel form = new JPanel(new GridBagLayout());
+        int row = 0;
+        if (single) {
+            form.add(new JLabel("Name"), gbc(row, 0, 1));
+            form.add(nameF, gbc(row++, 1, 1));
+            form.add(new JLabel("Variant"), gbc(row, 0, 1));
+            form.add(varF, gbc(row++, 1, 1));
+        } else {
+            form.add(new JLabel(files.size() + " images. Each becomes a node named after its file."), gbc(row++, 0, 2));
+        }
+        JLabel statsLabel = new JLabel(stats.toString());
+        statsLabel.setForeground(Draw.MUTED);
+        form.add(statsLabel, gbc(row++, 0, 2));
+        form.add(add, gbc(row++, 0, 2));
+        form.add(nearest, gbc(row++, 0, 2));
+        form.add(root, gbc(row, 0, 2));
+
+        while (true) {
+            if (!ask("Import image", form, single ? nameF : add)) return;
+            if (single) {
+                String err = validate(nameF.getText().trim(), varF.getText().trim(), null);
+                if (err != null) {
+                    error(err);
+                    continue;
+                }
+            }
+            break;
+        }
+        compozart.io.ImageImport.Mode mode = add.isSelected() ? compozart.io.ImageImport.Mode.ADD_COLORS
+                : compozart.io.ImageImport.Mode.NEAREST;
+        String folder = currentFolder.get();
+        int at = Math.min(p().nodes.size(), ed.nodeIndex() + 1);
+        List<Node> created = new ArrayList<>();
+        int[] approximated = {0};
+        ed.edit(null, () -> {
+            int k = at;
+            for (int i = 0; i < files.size(); i++) {
+                String name = single ? nameF.getText().trim() : baseName(files.get(i).getName());
+                String variant = single ? varF.getText().trim() : p().find(name, "") == null ? "" : p().uniqueVariant(name, "import");
+                compozart.io.ImageImport.Result r = compozart.io.ImageImport.apply(p(), images.get(i), mode, name, variant);
+                Node n = r.node();
+                n.folder = folder;
+                if (root.isSelected()) n.root = RootAnchor.centered(n.size());
+                p().nodes.add(k++, n);
+                created.add(n);
+                approximated[0] += r.approximated();
+            }
+            if (p().root == null || p().find(p().root) == null) p().root = created.get(0).ref();
+        });
+        ed.selectNode(created.get(created.size() - 1));
+        if (approximated[0] > 0) {
+            JOptionPane.showMessageDialog(parent, approximated[0] + (approximated[0] == 1 ? " pixel uses" : " pixels use")
+                    + " the nearest palette color, because its exact color "
+                    + (mode == compozart.io.ImageImport.Mode.NEAREST ? "is not in the palette." : "did not fit."),
+                    "Import image", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    /** A file name without its extension, usable as a node name. */
+    private static String baseName(String file) {
+        int dot = file.lastIndexOf('.');
+        String b = (dot > 0 ? file.substring(0, dot) : file).trim();
+        return b.isEmpty() ? "image" : b;
+    }
+
+    private static String escape(String s) {
+        return s.replace("&", "&amp;").replace("<", "&lt;");
     }
 
     // ---- folders ----

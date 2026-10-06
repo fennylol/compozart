@@ -153,9 +153,16 @@ public final class KeyMap {
 
     // ---- display and storage ----
 
+    /** Punctuation keys read better as the character than as Java's names ("Open Bracket"). */
+    private static final Map<Integer, String> PUNCTUATION = Map.ofEntries(
+            Map.entry(KeyEvent.VK_COMMA, ","), Map.entry(KeyEvent.VK_PERIOD, "."), Map.entry(KeyEvent.VK_SEMICOLON, ";"),
+            Map.entry(KeyEvent.VK_QUOTE, "'"), Map.entry(KeyEvent.VK_OPEN_BRACKET, "["), Map.entry(KeyEvent.VK_CLOSE_BRACKET, "]"),
+            Map.entry(KeyEvent.VK_EQUALS, "="), Map.entry(KeyEvent.VK_MINUS, "-"), Map.entry(KeyEvent.VK_SLASH, "/"),
+            Map.entry(KeyEvent.VK_BACK_SLASH, "\\"), Map.entry(KeyEvent.VK_BACK_QUOTE, "`"));
+
     public static String describe(KeyStroke ks) {
         String mods = InputEvent.getModifiersExText(ks.getModifiers());
-        String key = KeyEvent.getKeyText(ks.getKeyCode());
+        String key = PUNCTUATION.getOrDefault(ks.getKeyCode(), KeyEvent.getKeyText(ks.getKeyCode()));
         return mods.isEmpty() ? key : mods + "+" + key;
     }
 

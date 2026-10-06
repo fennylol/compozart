@@ -30,6 +30,7 @@ public final class MainWindow extends JFrame {
     private final CanvasView canvas;
     private final RenderView render;
     private final AnchorPanel anchorPanel;
+    private NodeLibrary library;
     private final JLabel status = new JLabel(" ");
     private final JLabel parentLabel = new JLabel();
     private final Map<Tool, JToggleButton> toolButtons = new EnumMap<>(Tool.class);
@@ -39,6 +40,7 @@ public final class MainWindow extends JFrame {
     private final JSpinner brush = new JSpinner(new SpinnerNumberModel(1, Brush.MIN, Brush.MAX, 1));
     private Path lastDir;
     private int exportPadding = 0, exportScale = 1;
+    private double exportPixelSize = compozart.io.GodotScene.DEFAULT_PIXEL_SIZE;
     private Exporter.Format exportFormat = Exporter.Format.ASEPRITE;
 
     public MainWindow(Project project, Path file) {
@@ -53,7 +55,7 @@ public final class MainWindow extends JFrame {
         canvas = new CanvasView(ed);
         canvas.setMenus(anchorMenus);
         render = new RenderView(ed);
-        anchorPanel = new AnchorPanel(ed, anchorMenus);
+        anchorPanel = new AnchorPanel(ed, anchorMenus, this::keyHint);
         canvas.onStatus(status::setText);
         canvas.onAnchorCreated(a -> anchorPanel.focusTarget());
         canvas.onFocusAnchorSettings(anchorPanel::focusSettings);
@@ -63,7 +65,8 @@ public final class MainWindow extends JFrame {
         setJMenuBar(menus());
         keys.install(getRootPane());
 
-        JSplitPane leftBottom = split(JSplitPane.VERTICAL_SPLIT, new NodeLibrary(ed, nodes), anchorPanel, 0.5);
+        library = new NodeLibrary(ed, nodes, this::keyHint);
+        JSplitPane leftBottom = split(JSplitPane.VERTICAL_SPLIT, library, anchorPanel, 0.5);
         JSplitPane left = split(JSplitPane.VERTICAL_SPLIT, new CreatureTree(ed, nodes, nodes::create), leftBottom, 0.38);
         JSplitPane right = split(JSplitPane.VERTICAL_SPLIT, render, new PalettePanel(ed), 0.5);
         JSplitPane centerRight = split(JSplitPane.HORIZONTAL_SPLIT, canvasPanel(), right, 0.62);
@@ -98,7 +101,10 @@ public final class MainWindow extends JFrame {
             @Override
             public void windowGainedFocus(WindowEvent e) {
                 String msg = settings.reloadIfChanged(keys);
-                if (msg != null) status.setText(msg);
+                if (msg != null) {
+                    status.setText(msg);
+                    anchorPanel.refreshHelp();
+                }
             }
         });
     }
@@ -162,8 +168,9 @@ public final class MainWindow extends JFrame {
         keys.define("file.quit", "Quit", () -> dispatchEvent(new WindowEvent(this, WindowEvent.WINDOW_CLOSING)), KeyMap.ctrl(KeyEvent.VK_Q));
 
         keys.define("node.new", "New node…", () -> nodes.create(null), KeyMap.shift(KeyEvent.VK_A));
+        keys.define("node.import", "Import image as node\u2026", nodes::importImages, none);
         keys.define("node.duplicate", "Duplicate as new variant", nodes::duplicate, KeyMap.shift(KeyEvent.VK_D));
-        keys.define("node.edit", "Edit name and variant…", nodes::edit, none);
+        keys.define("node.edit", "Rename node or folder\u2026", () -> library.renameSelected(), KeyMap.key(KeyEvent.VK_F2));
         keys.define("node.resize", "Resize node…", nodes::resize, KeyMap.ctrl(KeyEvent.VK_R));
         keys.define("node.root", "Set node as root", () -> nodes.setRoot(ed.node()), none);
         keys.define("node.delete", "Delete node", nodes::delete, none);
@@ -201,7 +208,9 @@ public final class MainWindow extends JFrame {
         bar.add(edit);
 
         JMenu node = new JMenu("Node");
-        for (String id : List.of("node.new", "node.duplicate", "node.edit", "node.resize", "node.root")) node.add(keys.menuItem(id));
+        for (String id : List.of("node.new", "node.import", "node.duplicate", "node.edit", "node.resize", "node.root")) {
+            node.add(keys.menuItem(id));
+        }
         node.addSeparator();
         for (String id : List.of("node.prev", "node.next", "parent.prev", "parent.next")) node.add(keys.menuItem(id));
         node.addSeparator();
@@ -229,7 +238,14 @@ public final class MainWindow extends JFrame {
         bar.setFloatable(false);
         ButtonGroup bg = new ButtonGroup();
         for (Tool t : Tool.values()) {
-            JToggleButton b = new JToggleButton(t.label);
+            JToggleButton b = new JToggleButton(PixelIcon.of(t.icon)) {
+                @Override
+                public String getToolTipText(java.awt.event.MouseEvent e) {
+                    return ToolHelp.title(t, MainWindow.this::keyHint);
+                }
+            };
+            ToolTipManager.sharedInstance().registerComponent(b);
+            b.getAccessibleContext().setAccessibleName(t.label);
             b.setFocusable(false);
             b.addActionListener(e -> ed.setTool(t));
             bg.add(b);
@@ -420,11 +436,24 @@ public final class MainWindow extends JFrame {
         format.setSelectedItem(exportFormat);
         JSpinner padding = new JSpinner(new SpinnerNumberModel(exportPadding, 0, 256, 1));
         JSpinner scale = new JSpinner(new SpinnerNumberModel(exportScale, 1, 64, 1));
+        JSpinner pixelSize = new JSpinner(new SpinnerNumberModel(exportPixelSize, 0.0001, 100.0, 0.001));
+        pixelSize.setEditor(new JSpinner.NumberEditor(pixelSize, "0.0####"));
+        pixelSize.setToolTipText("3D units per pixel. Godot's default for Sprite3D is 0.01.");
         JLabel summary = new JLabel();
         summary.setForeground(Draw.MUTED);
+        long parts = c.instances.size();
+        long textures = c.instances.stream().map(i -> i.node).distinct().count();
         Runnable update = () -> {
             Exporter.Format fm = (Exporter.Format) format.getSelectedItem();
             scale.setEnabled(fm.scalable());
+            padding.setEnabled(fm.padded());
+            pixelSize.setEnabled(fm == Exporter.Format.GODOT_3D);
+            if (fm.godot()) {
+                summary.setText("<html>" + parts + (parts == 1 ? " part" : " parts") + " \u00b7 " + textures
+                        + (textures == 1 ? " texture" : " textures") + " \u00b7 scene root: " + c.root.node.ref()
+                        + "<br>Each part pivots on its joint. Textures are embedded in the file.</html>");
+                return;
+            }
             int pad = (Integer) padding.getValue(), sc = fm.scalable() ? (Integer) scale.getValue() : 1;
             int w = (c.width + 2 * pad) * sc, h = (c.height + 2 * pad) * sc;
             String layers = fm == Exporter.Format.FLAT_PNG ? "1 image" : c.layers.size() + (c.layers.size() == 1 ? " layer" : " layers");
@@ -434,23 +463,27 @@ public final class MainWindow extends JFrame {
         padding.addChangeListener(e -> update.run());
         scale.addChangeListener(e -> update.run());
         update.run();
-        JPanel form = NodeActions.form(new String[]{"Format", "Padding", "Scale", ""}, format, padding, scale, summary);
+        JPanel form = NodeActions.form(new String[]{"Format", "Padding", "Scale", "3D pixel size", ""},
+                format, padding, scale, pixelSize, summary);
         if (!c.warnings.isEmpty()) {
             JLabel warn = new JLabel("<html>" + String.join("<br>", c.warnings) + "</html>");
             warn.setForeground(Draw.WARNING);
-            form.add(warn, NodeActions.gbc(4, 0, 2));
+            form.add(warn, NodeActions.gbc(5, 0, 2));
         }
         int r = JOptionPane.showConfirmDialog(this, form, "Export", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (r != JOptionPane.OK_OPTION) return;
         exportFormat = (Exporter.Format) format.getSelectedItem();
         exportPadding = (Integer) padding.getValue();
         exportScale = (Integer) scale.getValue();
+        exportPixelSize = ((Number) pixelSize.getValue()).doubleValue();
 
         String base = ed.file() == null ? "creature" : baseName(ed.file());
         Path f = chooseFile("Export " + exportFormat.label, FileDialog.SAVE, base + exportFormat.extension, exportFormat.extension);
         if (f == null) return;
         try {
-            byte[] data = Exporter.export(exportFormat, c, ed.project().palette, exportPadding, exportFormat.scalable() ? exportScale : 1);
+            byte[] data = exportFormat.godot()
+                    ? Exporter.godot(exportFormat, c, ed.project().palette, exportPixelSize)
+                    : Exporter.export(exportFormat, c, ed.project().palette, exportPadding, exportFormat.scalable() ? exportScale : 1);
             Files.write(f, data);
             status.setText("Exported " + f);
         } catch (IOException | RuntimeException ex) {
@@ -460,10 +493,18 @@ public final class MainWindow extends JFrame {
 
     // ---- keys ----
 
+    /** The first key bound to an action, readable, or "" when it has none. */
+    String keyHint(String id) {
+        if (keys.def(id) == null) return "";
+        List<KeyStroke> b = keys.bindings(id);
+        return b.isEmpty() ? "" : KeyMap.describe(b.get(0));
+    }
+
     private void editKeys() {
         Map<String, List<KeyStroke>> next = new KeyBindingsDialog(this, keys).showDialog();
         if (next == null) return;
         keys.setBindings(next);
+        anchorPanel.refreshHelp();
         try {
             status.setText("Saved shortcuts to " + settings.save(keys));
         } catch (IOException ex) {
