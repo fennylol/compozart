@@ -1,4 +1,4 @@
-# critter_inator
+# compozart
 
 *A pixel art creature composer that builds each creature from a tree of **nodes** joined at **anchors**.*
 
@@ -224,12 +224,19 @@ The dividers between them can be dragged.
 The canvas view edits the selected node.
 
 - Integer zoom, pan, and an optional pixel grid.
-- Tools: pencil, eraser, fill (4-connected), rectangle select and move, eyedropper, line, rectangle (outline or filled), anchor.
-- Right-click paints clear with the pencil, line, rectangle and fill tools. Alt+click picks a color with any drawing tool.
+- Tools: draw, eraser, fill (4-connected), rectangle select and move, eyedropper, line, rectangle (outline or filled), anchor.
+- Draw and eraser use a round brush, 1 to 32 pixels across. Size 1 is one pixel, 2 a square, 3 a plus; larger sizes are circles. Even sizes lean up and left of the cursor. A preview follows the cursor, mirrored by the symmetry mode and limited to pixels that can be painted. Draw previews in the selected color; the eraser, or the clear color, shows only the shape. A dark and light outline keeps the preview visible over any color, including low-alpha colors and colors that match the pixels underneath.
+- While a selection exists, draw, eraser, fill, line and rectangle only change pixels inside it, and fill stops at its edge. Anchors are not affected. Deselecting lifts the restriction.
+- Right-click paints clear with the line, rectangle and fill tools. Alt+click picks a color with any drawing tool.
+- The eraser's left button erases pixels only. Its right button erases anchors, the same way as the anchor tool's right button.
+- With the draw tool, right-click adds an anchor and Shift+right-click places the root anchor. Right-clicking a pixel that already has an anchor opens that anchor's menu.
 - A moved selection floats until you deselect, switch tools or switch nodes. Clear pixels in it do not overwrite.
-- Anchor tool: click to add a named anchor, Shift+click to place or move the root anchor, drag to move, arrow keys to point, Delete to remove. Right-click an anchor for a menu.
+- Ctrl+dragging a selection moves a copy and leaves the original in place. Ctrl+dragging a floating selection stamps it where it is and drags off another copy. Undo returns to before the first lift.
+- Anchor tool: click an empty pixel to add a named anchor, Shift+click to place or move the root anchor. Press on an existing anchor and drag to move it. Arrow keys point the selected anchor and Delete removes it. Right-click erases the anchor under the cursor; right-dragging erases every anchor along the path, as one undo step.
+- Adding an anchor, with either tool, is a press and drag. The anchor sits on the pixel where the press started and points toward the cursor, in whichever of the four directions is closest. Releasing without leaving the pixel keeps the default: up for a named anchor, the previous direction (or down) for the root anchor. Adding and aiming are one undo step.
 - Symmetry modes for the drawing tools: none, left/right, top/bottom, quad, diagonal `\`, diagonal `/`. The mirror axes go through the canvas center.
-- Double-clicking a named anchor opens the node that attaches there. If more than one variant could attach, a menu lists them, with an option to create a new one.
+- Double-clicking an anchor with the anchor tool selects it and moves the keyboard into its settings: the target name for a named anchor, the direction buttons for the root anchor.
+- The anchor panel's Open button, and the draw tool's right-click menu on an anchor, open the node that attaches there. If more than one variant could attach, a menu lists them, with an option to create a new one.
 
 #### Parent background
 
@@ -251,13 +258,20 @@ The creature tree shows the expanded instance tree from the root:
 - Empty or unresolved anchors are shown as rows of their own.
 - Any node can be made the root from its context menu.
 
-The node library lists every node, attached or not:
+The node library lists every node, attached or not, filed in folders:
 
 - Create, rename, duplicate, delete, set variant name, resize, reorder.
-- New nodes get a root anchor at the bottom center, pointing down, unless that option is turned off.
+- Folders nest to any depth. Each folder shows how many nodes it holds, counting subfolders.
+- Folders only organize the library. Anchors match nodes by name wherever they are filed, so refiling a node never changes the creature.
+- A folder lists its subfolders first, in name order, then its own nodes in the order you set. Moving a node up or down stays within its folder.
+- New nodes and folders go into the selected folder, or the selected node's folder.
+- Drag a node or folder onto a folder to move it there, or onto empty space to move it to the top level. Right-click offers the same as a Move to menu.
+- Renaming a folder carries its contents along. Moving a folder where one of the same name exists merges the two.
+- Deleting a folder keeps its contents: its nodes and subfolders move up one level.
+- New nodes get a root anchor on the middle pixel, pointing down, unless that option is turned off. On even sizes the middle leans toward (0, 0): pixel (15, 15) on a 32×32 node.
 - Duplicating a node creates a new variant of the same name.
 - Renaming a node offers to update the anchors that target the old name, when no other node keeps that name.
-- The previous/next node keys move through this list.
+- The previous/next node keys move through the library in the order it is shown, folders included.
 
 ### Render view
 
@@ -274,14 +288,24 @@ The node library lists every node, attached or not:
 
 ## Keyboard
 
-Every action below can be rebound in Edit > Keyboard shortcuts.
-Bindings are stored per user in `keybindings.json`, under `~/.config/critter_inator/` on Linux and `%APPDATA%\critter_inator\` on Windows.
+Every action below can be rebound in Edit > Keyboard shortcuts, or by editing `settings.json`.
+
+### Settings file
+
+- Settings live in `settings.json` next to the program: beside the self-extracting file, beside the bundle's launcher, or beside the jar. Running from compiled classes during development uses the working directory.
+- It is plain JSON outside any archive, so it can be edited in any text editor.
+- The first start writes a complete file with every action and its keys, defaults included.
+- The app rereads the file whenever its window regains focus, so outside edits apply without a restart.
+- Keys are written like `ctrl+shift+Z`. Key names are Java `KeyEvent` names without `VK_`, such as `COMMA` or `OPEN_BRACKET`. Single characters like `,` and `[` are also accepted. An empty list leaves an action unbound.
+- Unknown actions or keys are skipped and reported in the status bar.
+- The file has a version number. When a new version changes a default key, an older file that still holds the old default picks up the new one; keys the user changed stay as they are. When an action is renamed (the pencil became `tool.draw` in version 3), its saved keys move to the new name. The file is then rewritten at the new version.
+- If the program's folder is not writable, settings go to `~/.config/compozart/` on Linux or `%APPDATA%\compozart\` on Windows.
 Conflicting bindings are flagged in the dialog.
 Plain keys are ignored while a text field has focus, so typing a name never switches tools.
 
 | Action | Default |
 |---|---|
-| Pencil | `D` |
+| Draw | `D` |
 | Eraser | `E` |
 | Fill | `F` |
 | Select | `R` |
@@ -293,7 +317,11 @@ Plain keys are ignored while a text field has focus, so typing a name never swit
 | Delete selection or anchor | `Delete`, `Backspace` |
 | Deselect | `Esc` |
 | Select all pixels | `Ctrl+A` |
+| New node | `Shift+A` |
+| Duplicate node as a new variant | `Shift+D` |
+| Resize node | `Ctrl+R` |
 | Zoom in / out / fit | `=` / `-` / `0` |
+| Smaller / larger brush | `Shift+[` / `Shift+]`, or Ctrl+wheel over the canvas |
 | Previous / next color | `,` / `.` |
 | Previous / next node | `;` / `'` |
 | Previous / next parent background | `[` / `]` |
@@ -303,14 +331,16 @@ Plain keys are ignored while a text field has focus, so typing a name never swit
 | Export | `Ctrl+E` |
 | Quit | `Ctrl+Q` |
 
-Node commands, grid, symmetry, filled rectangle, reroll and render fit start unbound.
+The other node commands, grid, symmetry, filled rectangle, reroll and render fit start unbound.
 
 ## Files
 
 ### Save file
 
-- Projects save as JSON, with the extension `.critter.json`.
-- The file holds the format version, palette, nodes, anchors, root selection, and seed.
+- Projects save as JSON, with the extension `.zart`.
+- Files from before the rename to compozart (`.critter.json`, format tag `critter_inator`) still open. Saving one asks for a new `.zart` name rather than overwriting it.
+- The file holds the format version, palette, folders, nodes, anchors, root selection, and seed.
+- Folders are stored as paths: a `folders` list (so empty folders survive) and a `folder` field on each node, such as `"head/eyes"`. An empty string is the top level. Files without these fields load with every node at the top level.
 - Pixel grids are stored as one string per row, two hex digits per pixel, so the file stays readable and diffs cleanly.
 
 ### Exports
@@ -362,13 +392,18 @@ There is no Gradle or Maven.
 | `java Build.java compile` | Compiles the app |
 | `java Build.java test` | Compiles and runs the tests with a small built-in test runner |
 | `java Build.java run` | Compiles and starts the app |
-| `java Build.java jar` | `dist/critter_inator.jar`, including FlatLaf |
-| `java Build.java bundle` | `dist/critter_inator-linux.tar.gz` or `dist/critter_inator-windows.zip`, with a trimmed Java runtime |
+| `java Build.java jar` | `dist/compozart.jar`, including FlatLaf |
+| `java Build.java bundle` | `dist/<os>/compozart-<os>.tar.gz` (`.zip` on Windows), with a trimmed Java runtime |
+| `java Build.java single` | `dist/<os>/compozart`, one self-extracting executable (Linux only for now) |
+
+The jar runs on any OS, so it sits at the top of `dist/`.
+Everything tied to one OS goes in `dist/<os>/`: `linux`, `windows` or `macos`.
 | `java Build.java clean` | Removes build output |
 
 ## Distribution
 
 - **Jar**: about 1.2 MB. It runs anywhere Java 21 or newer is installed.
+- **Single file**: about 36 MB. A short shell header followed by the bundle as `.tar.gz`. The first run unpacks it to `~/.cache/compozart/<version>-<hash>/` (or under `$XDG_CACHE_HOME`), which takes a few seconds; later runs start from there. A rebuilt file has a new hash and unpacks fresh. Old unpacked versions are not cleaned up automatically. It needs only `sh`, `tar` and `gzip`, which every Linux desktop has.
 - **Bundle**: about 36 MB compressed and 56 MB unpacked. It contains a native launcher and a trimmed runtime, built with `jlink` and `jpackage`, so the target machine needs no Java. The Linux bundle is a `.tar.gz` so the launcher keeps its executable bit. A bundle only runs on the OS it was built on, so the Windows bundle is built on Windows.
 
 Building needs a JDK 21 with its `jmods` directory: `openjdk-21-jdk` on Linux, Temurin 21 on Windows.
@@ -383,5 +418,6 @@ lib/                 FlatLaf jar
 src/main/java/       app source
 src/test/java/       tests
 build/               compiler output (generated)
-dist/                jar and bundles (generated)
+dist/                jar (generated)
+dist/<os>/           bundle and single file (generated)
 ```
