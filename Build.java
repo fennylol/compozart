@@ -11,9 +11,9 @@ import javax.tools.*;
 /**
  * Build script for compozart. Run with the JDK's source launcher:
  *
- *   java Build.java compile | test | run | jar | bundle | single | clean
+ *   java Build.java compile | test | run | jar | dist | clean
  *
- * The jar runs on any OS and goes in dist/. Everything tied to one OS goes in dist/<os>/.
+ * jar writes build/compozart.jar. dist builds the app folder for this OS in dist/<os>/compozart/ and archives it.
  * No Gradle or Maven. Everything here uses the JDK's own APIs, so it behaves
  * the same on Linux and Windows.
  */
@@ -44,8 +44,7 @@ public class Build {
             case "test" -> System.exit(test(rest));
             case "run" -> System.exit(run(rest));
             case "jar" -> jar();
-            case "bundle" -> bundle();
-            case "single" -> single();
+            case "dist" -> dist();
             case "clean" -> clean();
             default -> {
                 usage();
@@ -55,7 +54,7 @@ public class Build {
     }
 
     static void usage() {
-        System.out.println("usage: java Build.java <compile|test|run|jar|bundle|single|clean> [args]");
+        System.out.println("usage: java Build.java <compile|test|run|jar|dist|clean> [args]");
         System.out.println("  test [Class...]  run all tests, or only the named test classes");
         System.out.println("  run [args...]    start the app, passing args through");
     }
@@ -102,8 +101,8 @@ public class Build {
 
     static Path jar() throws IOException {
         compile();
-        Files.createDirectories(DIST);
-        Path out = DIST.resolve(NAME + ".jar");
+        Files.createDirectories(BUILD);
+        Path out = BUILD.resolve(NAME + ".jar");
         Manifest mf = new Manifest();
         Attributes a = mf.getMainAttributes();
         a.put(Attributes.Name.MANIFEST_VERSION, "1.0");
@@ -146,117 +145,81 @@ public class Build {
         return out;
     }
 
-    /** Builds the app folder (native launcher, jar, trimmed runtime) with jlink and jpackage. Returns its path. */
-    static Path appImage() throws Exception {
+    /**
+     * The app as a folder, plus an archive of it:
+     *
+     *   dist/<os>/compozart/
+     *     compozart            run script (compozart.cmd on Windows)
+     *     app/compozart.jar
+     *     app/runtime/         trimmed Java runtime from jlink
+     *     settings/            filled in on first launch
+     *     compositions/        projects, starting with the demo; backups/ inside
+     *
+     * Only the run script and the runtime differ between platforms. The archive is a .tar.gz, which keeps the
+     * executable bits on the script and runtime, or a .zip on Windows.
+     */
+    static void dist() throws Exception {
         Path jar = jar();
         ToolProvider jlink = tool("jlink");
-        ToolProvider jpackage = tool("jpackage");
         if (!Files.isDirectory(Path.of(System.getProperty("java.home"), "jmods"))
                 && Runtime.version().feature() < 24) {
-            throw new IllegalStateException("bundle needs a JDK with a jmods/ directory (e.g. openjdk-21-jdk); "
+            throw new IllegalStateException("dist needs a JDK with a jmods/ directory (e.g. openjdk-21-jdk); "
                     + "this one is " + System.getProperty("java.home"));
         }
-
-        Path runtime = BUILD.resolve("runtime");
-        Path input = BUILD.resolve("bundle-input");
-        Path image = BUILD.resolve("bundle");
-        deleteTree(runtime);
-        deleteTree(input);
-        deleteTree(image);
-        Files.createDirectories(input);
-        Files.copy(jar, input.resolve(jar.getFileName()));
+        String os = osName();
+        Path platform = DIST.resolve(os);
+        deleteTree(platform);
+        Path top = platform.resolve(NAME);
+        Path app = top.resolve("app");
+        Files.createDirectories(app);
+        Files.createDirectories(top.resolve("settings"));
+        Files.createDirectories(top.resolve("compositions").resolve("backups"));
+        Files.copy(jar, app.resolve(NAME + ".jar"));
+        try (Stream<Path> examples = Files.list(ROOT.resolve("examples"))) {
+            for (Path e : examples.filter(p -> p.toString().endsWith(".zart")).toList()) {
+                Files.copy(e, top.resolve("compositions").resolve(e.getFileName()));
+            }
+        }
 
         String compress = Runtime.version().feature() >= 21 ? "zip-6" : "2";
         exec(jlink, "--add-modules", "java.desktop", "--strip-debug", "--no-header-files",
-                "--no-man-pages", "--compress=" + compress, "--output", runtime.toString());
-        exec(jpackage, "--type", "app-image", "--name", NAME, "--app-version", VERSION,
-                "--input", input.toString(), "--main-jar", jar.getFileName().toString(),
-                "--main-class", MAIN_CLASS, "--runtime-image", runtime.toString(),
-                "--dest", image.toString());
-        return image.resolve(NAME);
-    }
+                "--no-man-pages", "--compress=" + compress, "--output", app.resolve("runtime").toString());
 
-    /** dist/<os>/, created if needed. */
-    static Path platformDist() throws IOException {
-        Path dir = DIST.resolve(osName());
-        Files.createDirectories(dir);
-        return dir;
-    }
-
-    /** The app folder as an archive: .zip on Windows, .tar.gz elsewhere so the launcher stays executable. */
-    static void bundle() throws Exception {
-        Path appDir = appImage();
-        String os = osName();
-        Path out = platformDist().resolve(NAME + "-" + os + (os.equals("windows") ? ".zip" : ".tar.gz"));
-        if (os.equals("windows")) writeZip(appDir, out);
-        else writeTarGz(appDir, out);
-        System.out.printf("bundle -> %s (%.1f MB)%n", ROOT.relativize(out), Files.size(out) / 1e6);
-    }
-
-    /** Size of the shell header in front of the archive. The header is padded to exactly this many bytes. */
-    static final int STUB_SIZE = 4096;
-
-    /**
-     * One self-extracting executable: a shell header followed by the app folder as .tar.gz.
-     * On first run it unpacks into the user's cache folder, keyed by version and content hash, then starts
-     * from there. It tells the app where the file itself lives, so settings.json sits next to it.
-     */
-    static void single() throws Exception {
-        String os = osName();
         if (os.equals("windows")) {
-            throw new IllegalStateException("single is not available on Windows yet; use bundle for a zipped folder");
+            Files.writeString(top.resolve(NAME + ".cmd"), String.join("\r\n",
+                    "@echo off",
+                    "rem Starts compozart with the bundled Java runtime, or an installed Java 21+ if it is missing.",
+                    "setlocal",
+                    "set \"HERE=%~dp0\"",
+                    "set \"JAVA=%HERE%app\\runtime\\bin\\javaw.exe\"",
+                    "if not exist \"%JAVA%\" set \"JAVA=javaw\"",
+                    "set \"COMPOZART_HOME=%HERE%\"",
+                    "start \"\" \"%JAVA%\" -jar \"%HERE%app\\" + NAME + ".jar\" %*",
+                    ""));
+        } else {
+            Path script = top.resolve(NAME);
+            Files.writeString(script, String.join("\n",
+                    "#!/bin/sh",
+                    "# Starts compozart with the bundled Java runtime, or an installed Java 21+ if it is missing.",
+                    "here=$(cd \"$(dirname \"$0\")\" && pwd)",
+                    "java=\"$here/app/runtime/bin/java\"",
+                    "[ -x \"$java\" ] || java=java",
+                    "COMPOZART_HOME=\"$here\"",
+                    "export COMPOZART_HOME",
+                    "exec \"$java\" -jar \"$here/app/" + NAME + ".jar\" \"$@\"",
+                    ""));
+            try {
+                Files.setPosixFilePermissions(script, java.nio.file.attribute.PosixFilePermissions.fromString("rwxr-xr-x"));
+            } catch (UnsupportedOperationException ignored) {
+                // not a POSIX file system; the script still runs with sh
+            }
         }
-        Path appDir = appImage();
-        Path payload = BUILD.resolve("single-payload.tar.gz");
-        writeTarGz(appDir, payload);
-        byte[] digest = java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(payload));
-        String hash = HexFormat.of().formatHex(digest).substring(0, 12);
 
-        String script = """
-                #!/bin/sh
-                # NAME VERSION, self-extracting build for OS.
-                # The first run unpacks the app into the cache folder below; later runs start from there.
-                # settings.json is kept next to this file.
-                set -e
-                self=$(cd "$(dirname "$0")" && pwd)/$(basename "$0")
-                root="${XDG_CACHE_HOME:-$HOME/.cache}/NAME"
-                dir="$root/VERSION-HASH"
-                app="$dir/NAME/bin/NAME"
-                if [ ! -x "$app" ]; then
-                    mkdir -p "$root"
-                    tmp=$(mktemp -d "$root/.unpack.XXXXXX")
-                    tail -c +OFFSET "$self" | tar -xzf - -C "$tmp"
-                    if [ -e "$dir" ] && [ ! -x "$app" ]; then rm -rf "$dir"; fi
-                    mv "$tmp" "$dir" 2>/dev/null || true
-                    # another copy may have finished first; drop ours either way
-                    rm -rf "$tmp" "$dir/${tmp##*/}"
-                fi
-                COMPOZART_HOME=$(dirname "$self")
-                export COMPOZART_HOME
-                exec "$app" "$@"
-                """
-                .replace("NAME", NAME).replace("VERSION", VERSION).replace("HASH", hash).replace("OS", os)
-                .replace("OFFSET", String.valueOf(STUB_SIZE + 1));
-        byte[] head = script.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        if (head.length + 2 > STUB_SIZE) throw new IllegalStateException("stub script is longer than " + STUB_SIZE + " bytes");
-        byte[] stub = new byte[STUB_SIZE];
-        Arrays.fill(stub, (byte) ' ');
-        System.arraycopy(head, 0, stub, 0, head.length);
-        // The padding sits on a comment line after exec, so the shell never reads it.
-        stub[head.length] = '#';
-        stub[STUB_SIZE - 1] = '\n';
-
-        Path out = platformDist().resolve(NAME);
-        try (OutputStream o = Files.newOutputStream(out)) {
-            o.write(stub);
-            Files.copy(payload, o);
-        }
-        try {
-            Files.setPosixFilePermissions(out, java.nio.file.attribute.PosixFilePermissions.fromString("rwxr-xr-x"));
-        } catch (UnsupportedOperationException ignored) {
-            // not a POSIX file system; the file can still be run with sh
-        }
-        System.out.printf("single -> %s (%.1f MB)%n", ROOT.relativize(out), Files.size(out) / 1e6);
+        Path archive = DIST.resolve(NAME + "-" + os + (os.equals("windows") ? ".zip" : ".tar.gz"));
+        if (os.equals("windows")) writeZip(top, archive);
+        else writeTarGz(top, archive);
+        System.out.printf("dist -> %s/ and %s (%.1f MB)%n", ROOT.relativize(top), ROOT.relativize(archive),
+                Files.size(archive) / 1e6);
     }
 
     static void clean() throws IOException {

@@ -1,3 +1,5 @@
 build/
 dist/
-settings.json
+# created by development runs (java Build.java run)
+/settings/
+/compositions/

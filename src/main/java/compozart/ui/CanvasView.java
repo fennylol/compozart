@@ -220,7 +220,7 @@ final class CanvasView extends JComponent {
     protected void paintComponent(Graphics g0) {
         if (needsFit && getWidth() > 0) fit();
         Graphics2D g = (Graphics2D) g0.create();
-        g.setColor(UIManager.getColor("Panel.background").darker());
+        g.setColor(Draw.CANVAS);
         g.fillRect(0, 0, getWidth(), getHeight());
         Node n = ed.node();
         if (n == null) {
@@ -260,13 +260,13 @@ final class CanvasView extends JComponent {
         g.drawImage(img, x0, y0, cw, cw, null);
 
         if (ed.grid() && zoom >= 6) {
-            g.setColor(new Color(255, 255, 255, 22));
+            g.setColor(Draw.GRID);
             for (int i = 1; i < s; i++) {
                 g.drawLine(x0 + i * zoom, y0, x0 + i * zoom, y0 + cw);
                 g.drawLine(x0, y0 + i * zoom, x0 + cw, y0 + i * zoom);
             }
             if (s % 8 == 0 && s > 8) {
-                g.setColor(new Color(255, 255, 255, 40));
+                g.setColor(Draw.GRID_MAJOR);
                 for (int i = 8; i < s; i += 8) {
                     g.drawLine(x0 + i * zoom, y0, x0 + i * zoom, y0 + cw);
                     g.drawLine(x0, y0 + i * zoom, x0 + cw, y0 + i * zoom);

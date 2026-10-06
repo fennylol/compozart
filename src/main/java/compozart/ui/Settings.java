@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * {@code settings.json}, kept next to the program so it can be edited by hand.
+ * {@code settings.json}, kept in the app's settings folder so it can be edited by hand.
  * If that folder is not writable, the per-user config folder is used instead.
  */
 final class Settings {
@@ -39,31 +39,20 @@ final class Settings {
     private Path loadedFrom;
     private long loadedModified;
 
+    /** How many timestamped backups to keep per project. */
+    int backupKeep = 20;
+    /** Minutes between autosaves of unsaved changes into the backups folder; 0 turns autosave off. */
+    int autosaveMinutes = 5;
+    /** How many recent projects the home screen lists. */
+    int recentProjects = 10;
+
     Settings() {
-        this(programDir().resolve(FILE_NAME));
+        this(AppHome.settingsDir().resolve(FILE_NAME));
     }
 
     /** Settings stored at {@code primary}, falling back to the user config folder. */
     Settings(Path primary) {
         this.primary = primary;
-    }
-
-    /**
-     * The folder the program lives in: next to the self-extracting file, the bundle's launcher, or the jar.
-     * When running from compiled classes during development, the working directory.
-     */
-    static Path programDir() {
-        String home = System.getenv("COMPOZART_HOME");
-        if (home != null && !home.isBlank()) return Path.of(home).toAbsolutePath();
-        String launcher = System.getProperty("jpackage.app-path");
-        if (launcher != null && !launcher.isBlank()) return Path.of(launcher).toAbsolutePath().getParent();
-        try {
-            Path src = Path.of(Settings.class.getProtectionDomain().getCodeSource().getLocation().toURI());
-            if (Files.isRegularFile(src)) return src.toAbsolutePath().getParent();
-        } catch (Exception ignored) {
-            // fall through to the working directory
-        }
-        return Path.of("").toAbsolutePath();
     }
 
     static Path fallback() {
@@ -83,6 +72,8 @@ final class Settings {
      */
     String load(KeyMap keys) {
         Path f = Files.exists(primary) ? primary : Files.exists(fallback()) ? fallback() : null;
+        // Without a key map (the home screen) only the plain options are read, and nothing is written.
+        if (keys == null) return f == null ? null : read(null, f);
         if (f == null) {
             try {
                 save(keys);
@@ -111,6 +102,14 @@ final class Settings {
             loadedFrom = f;
             loadedModified = Files.getLastModifiedTime(f).toMillis();
             Map<String, Object> m = Json.obj(Json.parse(Files.readString(f, StandardCharsets.UTF_8)), FILE_NAME);
+            Object backups = m.get("backups");
+            if (backups != null) {
+                Map<String, Object> b = Json.obj(backups, "backups");
+                backupKeep = (int) Math.max(0, Json.num(b, "keep", backupKeep));
+                autosaveMinutes = (int) Math.max(0, Json.num(b, "autosaveMinutes", autosaveMinutes));
+            }
+            recentProjects = (int) Math.max(1, Json.num(m, "recentProjects", recentProjects));
+            if (keys == null) return null;
             Object kb = m.get("keybindings");
             if (kb == null) return null;
             Map<String, Object> bindings = new LinkedHashMap<>(Json.obj(kb, "keybindings"));
@@ -143,8 +142,14 @@ final class Settings {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("about", "compozart settings. Edit freely; the app reloads this file when its window regains focus. "
                 + "Keys are written like \"ctrl+shift+Z\". Key names are Java KeyEvent names without VK_, "
-                + "for example COMMA, OPEN_BRACKET, DELETE, F5. An empty list leaves an action unbound.");
+                + "for example COMMA, OPEN_BRACKET, DELETE, F5. An empty list leaves an action unbound. "
+                + "Backups: keep is how many timestamped copies to keep per project; autosaveMinutes 0 turns autosave off.");
         m.put("version", (long) VERSION);
+        Map<String, Object> backups = new LinkedHashMap<>();
+        backups.put("keep", (long) backupKeep);
+        backups.put("autosaveMinutes", (long) autosaveMinutes);
+        m.put("backups", backups);
+        m.put("recentProjects", (long) recentProjects);
         m.put("keybindings", keys.toJson());
         String text = Json.write(m);
         Path target = loadedFrom != null ? loadedFrom : primary;

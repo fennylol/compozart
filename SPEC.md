@@ -214,6 +214,15 @@ Cycles are allowed, for example a "tail" node with its own "tail" anchor.
 - A node with two in-cycle anchors branches, and each branch keeps its own count.
 - Composition stops at 4096 instances and the render view shows a warning.
 
+## Home screen
+
+- Starting the app without a project file opens the home screen. Starting it with one (`compozart creature.zart`) goes straight to the editor.
+- It offers New project and Open…, then two lists: the most recently opened or saved projects, newest first, and the other projects in the compositions folder, newest first. Backups are not listed.
+- Each entry shows a rendered thumbnail of the creature, its name, its folder, and when it last changed.
+- Double-click or Enter opens a project. Right-click or Delete removes an entry from the recent list without touching the file.
+- The recent list lives in `settings/recent.json`. Its length is `recentProjects` in `settings.json` (default 10). Missing files are skipped.
+- File > Home closes the project, asking about unsaved changes, and returns here.
+
 ## Views
 
 The window shows the tree on the left, the canvas in the center, the render on the right, and the palette along one edge.
@@ -310,57 +319,52 @@ Every action below can be rebound in Edit > Keyboard shortcuts, or by editing `s
 
 ### Settings file
 
-- Settings live in `settings.json` next to the program: beside the self-extracting file, beside the bundle's launcher, or beside the jar. Running from compiled classes during development uses the working directory.
+- Settings live in `settings/settings.json` in the app folder. Running from compiled classes during development uses the working directory's `settings/`.
 - It is plain JSON outside any archive, so it can be edited in any text editor.
 - The first start writes a complete file with every action and its keys, defaults included.
 - The app rereads the file whenever its window regains focus, so outside edits apply without a restart.
 - Keys are written like `ctrl+shift+Z`. Key names are Java `KeyEvent` names without `VK_`, such as `COMMA` or `OPEN_BRACKET`. Single characters like `,` and `[` are also accepted. An empty list leaves an action unbound.
 - Unknown actions or keys are skipped and reported in the status bar.
 - The file has a version number. When a new version changes a default key, an older file that still holds the old default picks up the new one; keys the user changed stay as they are. When an action is renamed (the pencil became `tool.draw` in version 3), its saved keys move to the new name. The file is then rewritten at the new version.
-- If the program's folder is not writable, settings go to `~/.config/compozart/` on Linux or `%APPDATA%\compozart\` on Windows.
-Conflicting bindings are flagged in the dialog.
-Plain keys are ignored while a text field has focus, so typing a name never switches tools.
+- `recentProjects` sets how many recent projects the home screen lists (default 10).
+- A `backups` section sets how many backups to keep per project (`keep`, default 20) and the autosave interval (`autosaveMinutes`, default 5; 0 turns it off).
+- If the settings folder is not writable, settings go to `~/.config/compozart/` on Linux or `%APPDATA%\compozart\` on Windows.
 
-| Action | Default |
-|---|---|
-| Draw | `D` |
-| Eraser | `E` |
-| Fill | `F` |
-| Select | `R` |
-| Eyedropper | `C` |
-| Line | `L` |
-| Rectangle | `U` |
-| Anchor | `A` |
-| Point the selected anchor | arrow keys |
-| Delete selection or anchor | `Delete`, `Backspace` |
-| Deselect | `Esc` |
-| Select all pixels | `Ctrl+A` |
-| New node | `Shift+A` |
-| Duplicate node as a new variant | `Shift+D` |
-| Resize node | `Ctrl+R` |
-| Rename node or folder | `F2` |
-| Zoom in / out / fit | `=` / `-` / `0` |
-| Smaller / larger brush | `Shift+[` / `Shift+]`, or Ctrl+wheel over the canvas |
-| Previous / next color | `,` / `.` |
-| Previous / next node | `;` / `'` |
-| Previous / next parent background | `[` / `]` |
-| Undo | `Ctrl+Z` |
-| Redo | `Ctrl+Shift+Z`, `Ctrl+Y` |
-| New / open / save / save as | `Ctrl+N` / `Ctrl+O` / `Ctrl+S` / `Ctrl+Shift+S` |
-| Export | `Ctrl+E` |
-| Quit | `Ctrl+Q` |
+## Appearance
 
-The other node commands, grid, symmetry, filled rectangle, reroll and render fit start unbound.
+### Themes
+
+- `settings/themes.json` holds named themes and the name of the active one. View > Theme switches between them live and records the choice in the file.
+- Each theme has a FlatLaf base (`dark` or `light`), a `flatlaf` table passed straight to FlatLaf (variables such as `@background`, `@foreground` and `@accentColor`, or any FlatLaf UI key), a `colors` table for the app's own colors, and an `icons` table for icon colors.
+- App colors: `rootAnchor`, `namedAnchor`, `problem`, `warning`, `muted`, `accent`, `checkerDark`, `checkerLight`, `canvas` (behind the canvas and render), `grid` and `gridMajor`. Colors are `#rrggbb` or `#rrggbbaa`.
+- Colors a theme leaves out come from the built-in default theme. Bad values are skipped and reported in the status bar.
+- Built in: Default dark (the original look), Catppuccin Mocha and Catppuccin Latte.
+
+### Icons
+
+- `settings/icons.json` holds the toolbar icons as 16×16 grids, one string per row.
+- `.` is transparent, `#` the theme's text color, `m` a muted text color, and other letters take their color from the active theme's `icons` table.
+- An icon that is missing or malformed in the file uses the built-in one, and the problem is reported.
+
+Both files are written from the built-in defaults when missing, and reread when the window regains focus.
 
 ## Files
 
 ### Save file
 
 - Projects save as JSON, with the extension `.zart`.
+- The `compositions` folder in the app folder is the default home for projects: a new project's first save and every Open start there. Save As starts in the project's current folder, so projects can live anywhere.
 - Files from before the rename to compozart (`.critter.json`, format tag `critter_inator`) still open. Saving one asks for a new `.zart` name rather than overwriting it.
 - The file holds the format version, palette, folders, nodes, anchors, root selection, and seed.
 - Folders are stored as paths: a `folders` list (so empty folders survive) and a `folder` field on each node, such as `"head/eyes"`. An empty string is the top level. Files without these fields load with every node at the top level.
 - Pixel grids are stored as one string per row, two hex digits per pixel, so the file stays readable and diffs cleanly.
+
+### Backups
+
+- Every save also writes a timestamped copy to `compositions/backups/<project name>/`, named like `creature 2026-10-06 142233.zart`. The newest 20 per project are kept (configurable).
+- Unsaved changes are autosaved every 5 minutes (configurable) to `compositions/backups/<project name>/<project name> autosave.zart`, replacing the previous autosave. Untitled projects use the name `untitled`.
+- File > Open backups folder opens the folder in the system file manager.
+- If the app folder is not writable, the compositions folder (and its backups) moves to the per-user config folder instead.
 
 ### Exports
 
@@ -417,21 +421,33 @@ There is no Gradle or Maven.
 | `java Build.java compile` | Compiles the app |
 | `java Build.java test` | Compiles and runs the tests with a small built-in test runner |
 | `java Build.java run` | Compiles and starts the app |
-| `java Build.java jar` | `dist/compozart.jar`, including FlatLaf |
-| `java Build.java bundle` | `dist/<os>/compozart-<os>.tar.gz` (`.zip` on Windows), with a trimmed Java runtime |
-| `java Build.java single` | `dist/<os>/compozart`, one self-extracting executable (Linux only for now) |
-
-The jar runs on any OS, so it sits at the top of `dist/`.
-Everything tied to one OS goes in `dist/<os>/`: `linux`, `windows` or `macos`.
+| `java Build.java jar` | `build/compozart.jar`, including FlatLaf |
+| `java Build.java dist` | The app folder for this OS in `dist/<os>/compozart/`, and an archive of it |
 | `java Build.java clean` | Removes build output |
+
+Building needs a JDK 21 with its `jmods` directory: `openjdk-21-jdk` on Linux, Temurin 21 on Windows.
 
 ## Distribution
 
-- **Jar**: about 1.2 MB. It runs anywhere Java 21 or newer is installed.
-- **Single file**: about 36 MB. A short shell header followed by the bundle as `.tar.gz`. The first run unpacks it to `~/.cache/compozart/<version>-<hash>/` (or under `$XDG_CACHE_HOME`), which takes a few seconds; later runs start from there. A rebuilt file has a new hash and unpacks fresh. Old unpacked versions are not cleaned up automatically. It needs only `sh`, `tar` and `gzip`, which every Linux desktop has.
-- **Bundle**: about 36 MB compressed and 56 MB unpacked. It contains a native launcher and a trimmed runtime, built with `jlink` and `jpackage`, so the target machine needs no Java. The Linux bundle is a `.tar.gz` so the launcher keeps its executable bit. A bundle only runs on the OS it was built on, so the Windows bundle is built on Windows.
+The app ships as one folder:
 
-Building needs a JDK 21 with its `jmods` directory: `openjdk-21-jdk` on Linux, Temurin 21 on Windows.
+```
+compozart/
+  compozart            run script (compozart.cmd on Windows)
+  app/
+    compozart.jar
+    runtime/           trimmed Java runtime from jlink
+  settings/            settings.json, themes.json, icons.json, recent.json
+  compositions/        projects, starting with the demo
+    backups/           copies made on save, and autosaves
+```
+
+- Only the run script and the runtime differ between platforms. The runtime is built per OS, so the Windows folder is built on Windows.
+- The run script starts the jar with `app/runtime`, or with an installed Java 21+ if the runtime is missing. It names the folder in `COMPOZART_HOME` so the app finds `settings/` and `compositions/`.
+- `settings/` starts empty and is filled with defaults on first launch. `compositions/` starts with the demo creature.
+- The archive is `dist/compozart-<os>.tar.gz`, which keeps the executable bits on the script and the runtime, or `dist/compozart-windows.zip`.
+- Sizes: the jar is about 1.3 MB, the runtime about 54 MB, and the archive about 36 MB.
+- Without the run script, a jar inside an `app/` folder treats the folder above it as home; a jar anywhere else uses its own folder.
 
 ## Layout
 
@@ -441,8 +457,9 @@ SPEC.md
 examples/            demo creature
 lib/                 FlatLaf jar
 src/main/java/       app source
+src/main/resources/  built-in themes.json and icons.json
 src/test/java/       tests
-build/               compiler output (generated)
-dist/                jar (generated)
-dist/<os>/           bundle and single file (generated)
+build/               compiler output and the jar (generated)
+dist/                app folders and archives (generated)
+settings/, compositions/  created by development runs (ignored by git)
 ```

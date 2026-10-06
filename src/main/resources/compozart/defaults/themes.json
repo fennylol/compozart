@@ -1,0 +1,111 @@
+{
+  "about": "Color themes. \"theme\" picks the active one; View > Theme switches between them. \"base\" is the FlatLaf look (dark or light). \"flatlaf\" passes keys straight to FlatLaf: variables like @background, @foreground and @accentColor, or any UI key such as Button.arc. \"colors\" are the app's own colors (#rrggbb or #rrggbbaa). \"icons\" are the colors for the letters in icons.json.",
+  "version": 1,
+  "theme": "Default dark",
+  "themes": {
+    "Default dark": {
+      "base": "dark",
+      "flatlaf": {
+        "@accentColor": "#cba6f7"
+      },
+      "colors": {
+        "rootAnchor": "#fab387",
+        "namedAnchor": "#89dceb",
+        "problem": "#f38ba8",
+        "warning": "#f9e2af",
+        "muted": "#9399b2",
+        "accent": "#cba6f7",
+        "checkerDark": "#2a2a3a",
+        "checkerLight": "#34344a",
+        "canvas": "#2b2b2b",
+        "grid": "#ffffff16",
+        "gridMajor": "#ffffff28"
+      },
+      "icons": {
+        "p": "#f5c2e7",
+        "y": "#f9e2af",
+        "o": "#fab387",
+        "b": "#89b4fa",
+        "g": "#a6e3a1",
+        "s": "#89dceb",
+        "v": "#cba6f7",
+        "r": "#f38ba8",
+        "w": "#bac2de"
+      }
+    },
+    "Catppuccin Mocha": {
+      "base": "dark",
+      "flatlaf": {
+        "@background": "#1e1e2e",
+        "@foreground": "#cdd6f4",
+        "@accentColor": "#cba6f7",
+        "@selectionBackground": "#45475a",
+        "@selectionForeground": "#cdd6f4",
+        "@disabledForeground": "#6c7086",
+        "Component.borderColor": "#45475a",
+        "Separator.foreground": "#313244"
+      },
+      "colors": {
+        "rootAnchor": "#fab387",
+        "namedAnchor": "#89dceb",
+        "problem": "#f38ba8",
+        "warning": "#f9e2af",
+        "muted": "#9399b2",
+        "accent": "#cba6f7",
+        "checkerDark": "#24243a",
+        "checkerLight": "#2e2e46",
+        "canvas": "#11111b",
+        "grid": "#cdd6f414",
+        "gridMajor": "#cdd6f426"
+      },
+      "icons": {
+        "p": "#f5c2e7",
+        "y": "#f9e2af",
+        "o": "#fab387",
+        "b": "#89b4fa",
+        "g": "#a6e3a1",
+        "s": "#89dceb",
+        "v": "#cba6f7",
+        "r": "#f38ba8",
+        "w": "#bac2de"
+      }
+    },
+    "Catppuccin Latte": {
+      "base": "light",
+      "flatlaf": {
+        "@background": "#eff1f5",
+        "@foreground": "#4c4f69",
+        "@accentColor": "#8839ef",
+        "@selectionBackground": "#bcc0cc",
+        "@selectionForeground": "#4c4f69",
+        "@disabledForeground": "#9ca0b0",
+        "Component.borderColor": "#bcc0cc",
+        "Separator.foreground": "#ccd0da"
+      },
+      "colors": {
+        "rootAnchor": "#fe640b",
+        "namedAnchor": "#04a5e5",
+        "problem": "#d20f39",
+        "warning": "#df8e1d",
+        "muted": "#7c7f93",
+        "accent": "#8839ef",
+        "checkerDark": "#dce0e8",
+        "checkerLight": "#e6e9ef",
+        "canvas": "#ccd0da",
+        "grid": "#4c4f6918",
+        "gridMajor": "#4c4f6930"
+      },
+      "icons": {
+        "p": "#ea76cb",
+        "y": "#df8e1d",
+        "o": "#fe640b",
+        "b": "#1e66f5",
+        "g": "#40a02b",
+        "s": "#04a5e5",
+        "v": "#8839ef",
+        "r": "#d20f39",
+        "w": "#5c5f77"
+      }
+    }
+  }
+}

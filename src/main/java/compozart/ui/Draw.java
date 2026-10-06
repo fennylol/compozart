@@ -13,14 +13,33 @@ import java.awt.image.BufferedImage;
 
 /** Drawing helpers shared by the views. */
 final class Draw {
-    static final Color ROOT_ANCHOR = new Color(0xfab387);
-    static final Color NAMED_ANCHOR = new Color(0x89dceb);
-    static final Color PROBLEM = new Color(0xf38ba8);
-    static final Color WARNING = new Color(0xf9e2af);
-    static final Color MUTED = new Color(0x9399b2);
-    static final Color ACCENT = new Color(0xcba6f7);
-    private static final Color CHECK_A = new Color(0x2a2a3a);
-    private static final Color CHECK_B = new Color(0x34344a);
+    // The app's own colors. themes.json sets them through applyTheme; these are the built-in defaults.
+    static Color ROOT_ANCHOR = new Color(0xfab387);
+    static Color NAMED_ANCHOR = new Color(0x89dceb);
+    static Color PROBLEM = new Color(0xf38ba8);
+    static Color WARNING = new Color(0xf9e2af);
+    static Color MUTED = new Color(0x9399b2);
+    static Color ACCENT = new Color(0xcba6f7);
+    private static Color CHECK_A = new Color(0x2a2a3a);
+    private static Color CHECK_B = new Color(0x34344a);
+    /** Behind the canvas and the render. */
+    static Color CANVAS = new Color(0x2b2b2b);
+    static Color GRID = new Color(255, 255, 255, 22);
+    static Color GRID_MAJOR = new Color(255, 255, 255, 40);
+
+    static void applyTheme(java.util.Map<String, Color> c) {
+        ROOT_ANCHOR = c.getOrDefault("rootAnchor", ROOT_ANCHOR);
+        NAMED_ANCHOR = c.getOrDefault("namedAnchor", NAMED_ANCHOR);
+        PROBLEM = c.getOrDefault("problem", PROBLEM);
+        WARNING = c.getOrDefault("warning", WARNING);
+        MUTED = c.getOrDefault("muted", MUTED);
+        ACCENT = c.getOrDefault("accent", ACCENT);
+        CHECK_A = c.getOrDefault("checkerDark", CHECK_A);
+        CHECK_B = c.getOrDefault("checkerLight", CHECK_B);
+        CANVAS = c.getOrDefault("canvas", CANVAS);
+        GRID = c.getOrDefault("grid", GRID);
+        GRID_MAJOR = c.getOrDefault("gridMajor", GRID_MAJOR);
+    }
 
     private Draw() {
     }

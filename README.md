@@ -15,25 +15,31 @@ There is no Gradle or Maven: the build is one Java file.
 ```
 java Build.java run       # compile and start
 java Build.java test      # run the tests
-java Build.java jar       # dist/compozart.jar, needs Java 21+ to run
-java Build.java bundle    # dist/linux/compozart-linux.tar.gz, Java included
-java Build.java single    # dist/linux/compozart, one executable, Java included
+java Build.java dist      # dist/linux/compozart/ and dist/compozart-linux.tar.gz
 ```
 
-The bundle and the single file only run on the OS that built them, and go in `dist/<os>/`.
-Build the Windows bundle on Windows.
-The single file is Linux only for now.
+`dist` builds the app folder for the OS it runs on, with Java included.
+Build the Windows folder on Windows.
 
 ## Running
 
+Unpack the archive and run `compozart/compozart` (`compozart.cmd` on Windows).
+
 ```
-java -jar dist/compozart.jar examples/demo.zart
+compozart/
+  compozart        run script
+  app/             compozart.jar and the bundled Java runtime
+  settings/        settings.json, themes.json, icons.json, recent.json
+  compositions/    your projects, by default
+    backups/       a copy on every save, and autosaves
 ```
 
-The single file runs directly: `dist/linux/compozart`.
-Its first start unpacks into `~/.cache/compozart/` and takes a few seconds.
-From the bundle, run `compozart/bin/compozart`.
-The demo has a body, a pair of eyes in a random group, mirrored arms behind the body, and a tail repeated four times with a tip.
+The app opens on a home screen with your recent projects and everything in `compositions/`.
+New projects save there by default; Save As can put them anywhere.
+
+The settings files appear on first launch.
+They are plain JSON, and the app picks up edits when its window regains focus.
+`themes.json` holds the color themes (View > Theme switches them) and `icons.json` the toolbar icons as 16×16 text grids.
 
 ## Working with it
 

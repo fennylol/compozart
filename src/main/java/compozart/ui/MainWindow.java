@@ -25,6 +25,9 @@ public final class MainWindow extends JFrame {
     private final Editor ed;
     private final KeyMap keys = new KeyMap();
     private final Settings settings = new Settings();
+    private final Backups backups = new Backups(AppHome.backupsDir());
+    /** Autosaves unsaved work into the backups folder every few minutes. */
+    private final javax.swing.Timer autosave = new javax.swing.Timer(60_000, e -> autosave());
     private final NodeActions nodes;
     private final AnchorMenus anchorMenus;
     private final CanvasView canvas;
@@ -39,6 +42,7 @@ public final class MainWindow extends JFrame {
     private final JCheckBox grid = new JCheckBox("Grid", true);
     private final JSpinner brush = new JSpinner(new SpinnerNumberModel(1, Brush.MIN, Brush.MAX, 1));
     private Path lastDir;
+    private final Recent recent = new Recent();
     private int exportPadding = 0, exportScale = 1;
     private double exportPixelSize = compozart.io.GodotScene.DEFAULT_PIXEL_SIZE;
     private Exporter.Format exportFormat = Exporter.Format.ASEPRITE;
@@ -81,7 +85,10 @@ public final class MainWindow extends JFrame {
 
         ed.addListener(what -> refreshChrome());
         ed.load(project, file);
-        if (file != null) lastDir = file.toAbsolutePath().getParent();
+        if (file != null) {
+            lastDir = file.toAbsolutePath().getParent();
+            recent.add(file, settings.recentProjects);
+        }
 
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
@@ -104,9 +111,13 @@ public final class MainWindow extends JFrame {
                 if (msg != null) {
                     status.setText(msg);
                     anchorPanel.refreshHelp();
+                    restartAutosave();
                 }
+                String look = Appearance.get().reloadIfChanged();
+                if (look != null) status.setText(look);
             }
         });
+        restartAutosave();
     }
 
     private static JSplitPane split(int orientation, Component a, Component b, double weight) {
@@ -165,6 +176,8 @@ public final class MainWindow extends JFrame {
         keys.define("file.save", "Save", this::save, KeyMap.ctrl(KeyEvent.VK_S));
         keys.define("file.saveAs", "Save as…", this::saveAs, KeyMap.ctrlShift(KeyEvent.VK_S));
         keys.define("file.export", "Export…", this::export, KeyMap.ctrl(KeyEvent.VK_E));
+        keys.define("file.backups", "Open backups folder", this::openBackups, none);
+        keys.define("file.home", "Home\u2026", this::goHome, none);
         keys.define("file.quit", "Quit", () -> dispatchEvent(new WindowEvent(this, WindowEvent.WINDOW_CLOSING)), KeyMap.ctrl(KeyEvent.VK_Q));
 
         keys.define("node.new", "New node…", () -> nodes.create(null), KeyMap.shift(KeyEvent.VK_A));
@@ -195,6 +208,9 @@ public final class MainWindow extends JFrame {
         for (String id : List.of("file.new", "file.open", "file.save", "file.saveAs")) file.add(keys.menuItem(id));
         file.addSeparator();
         file.add(keys.menuItem("file.export"));
+        file.addSeparator();
+        file.add(keys.menuItem("file.home"));
+        file.add(keys.menuItem("file.backups"));
         file.addSeparator();
         file.add(keys.menuItem("file.quit"));
         bar.add(file);
@@ -229,6 +245,8 @@ public final class MainWindow extends JFrame {
         for (String id : List.of("view.zoomIn", "view.zoomOut", "view.fit", "view.grid")) view.add(keys.menuItem(id));
         view.addSeparator();
         for (String id : List.of("render.fit", "render.reroll")) view.add(keys.menuItem(id));
+        view.addSeparator();
+        view.add(themeMenu());
         bar.add(view);
         return bar;
     }
@@ -331,7 +349,8 @@ public final class MainWindow extends JFrame {
 
     private void open() {
         if (!confirmDiscard()) return;
-        Path f = chooseFile("Open project", FileDialog.LOAD, null, ProjectIO.EXTENSION, ProjectIO.LEGACY_EXTENSION);
+        Path f = chooseFile("Open project", FileDialog.LOAD, AppHome.compositionsDir(), null,
+                ProjectIO.EXTENSION, ProjectIO.LEGACY_EXTENSION);
         if (f != null) openFile(f);
     }
 
@@ -340,6 +359,7 @@ public final class MainWindow extends JFrame {
             Project p = ProjectIO.load(f);
             ed.load(p, f);
             lastDir = f.toAbsolutePath().getParent();
+            recent.add(f, settings.recentProjects);
         } catch (IOException | RuntimeException ex) {
             JOptionPane.showMessageDialog(this, "Could not open " + f.getFileName() + ":\n" + ex.getMessage(),
                     "Open", JOptionPane.ERROR_MESSAGE);
@@ -354,7 +374,9 @@ public final class MainWindow extends JFrame {
 
     private boolean saveAs() {
         String suggested = (ed.file() != null ? baseName(ed.file()) : "creature") + ProjectIO.EXTENSION;
-        Path f = chooseFile("Save project", FileDialog.SAVE, suggested, ProjectIO.EXTENSION);
+        // New projects start in the compositions folder; saved ones start where they already are.
+        Path start = ed.file() != null ? ed.file().toAbsolutePath().getParent() : AppHome.compositionsDir();
+        Path f = chooseFile("Save project", FileDialog.SAVE, start, suggested, ProjectIO.EXTENSION);
         return f != null && writeProject(f);
     }
 
@@ -364,7 +386,15 @@ public final class MainWindow extends JFrame {
             ProjectIO.save(ed.project(), f);
             ed.markSaved(f);
             lastDir = f.toAbsolutePath().getParent();
+            recent.add(f, settings.recentProjects);
             status.setText("Saved " + f);
+            if (settings.backupKeep > 0) {
+                try {
+                    backups.backup(ed.project(), baseName(f), settings.backupKeep, java.time.LocalDateTime.now());
+                } catch (IOException ex) {
+                    status.setText("Saved " + f + ", but the backup failed: " + ex.getMessage());
+                }
+            }
             return true;
         } catch (IOException ex) {
             JOptionPane.showMessageDialog(this, "Could not save:\n" + ex.getMessage(), "Save", JOptionPane.ERROR_MESSAGE);
@@ -376,10 +406,11 @@ public final class MainWindow extends JFrame {
      * Shows the platform's native file dialog, listing files with any of the given extensions.
      * When saving, a name without the first extension gets it added.
      */
-    private Path chooseFile(String title, int mode, String suggested, String... extensions) {
+    private Path chooseFile(String title, int mode, Path startDir, String suggested, String... extensions) {
         String extension = extensions[0];
         FileDialog fd = new FileDialog(this, title, mode);
-        if (lastDir != null) fd.setDirectory(lastDir.toString());
+        Path start = startDir != null ? startDir : lastDir != null ? lastDir : AppHome.compositionsDir();
+        fd.setDirectory(start.toString());
         fd.setFilenameFilter((dir, name) -> java.util.Arrays.stream(extensions).anyMatch(name::endsWith)
                 || new java.io.File(dir, name).isDirectory());
         boolean windows = System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
@@ -411,6 +442,104 @@ public final class MainWindow extends JFrame {
             if (name.endsWith(ext)) return name.substring(0, name.length() - ext.length());
         }
         return name;
+    }
+
+    // ---- backups and appearance ----
+
+    private void restartAutosave() {
+        autosave.stop();
+        if (settings.autosaveMinutes <= 0) return;
+        autosave.setDelay(settings.autosaveMinutes * 60_000);
+        autosave.setInitialDelay(settings.autosaveMinutes * 60_000);
+        autosave.start();
+    }
+
+    /** Writes unsaved work to the project's autosave file in the backups folder. */
+    private void autosave() {
+        if (!ed.dirty()) return;
+        String base = ed.file() == null ? "untitled" : baseName(ed.file());
+        try {
+            Path f = backups.autosave(ed.project(), base);
+            status.setText("Autosaved to " + f);
+        } catch (IOException | RuntimeException ex) {
+            status.setText("Autosave failed: " + ex.getMessage());
+        }
+    }
+
+    private void openBackups() {
+        Path dir = backups.dir();
+        try {
+            java.nio.file.Files.createDirectories(dir);
+            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
+                Desktop.getDesktop().open(dir.toFile());
+                return;
+            }
+        } catch (IOException | RuntimeException ignored) {
+            // fall through and show the path instead
+        }
+        JOptionPane.showMessageDialog(this, "Backups are in:\n" + dir, "Backups", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /** View > Theme, rebuilt each time it opens so it lists the themes in themes.json. */
+    private JMenu themeMenu() {
+        JMenu menu = new JMenu("Theme");
+        menu.addMenuListener(new javax.swing.event.MenuListener() {
+            @Override
+            public void menuSelected(javax.swing.event.MenuEvent e) {
+                menu.removeAll();
+                Appearance look = Appearance.get();
+                ButtonGroup group = new ButtonGroup();
+                for (String name : look.themeNames()) {
+                    JRadioButtonMenuItem item = new JRadioButtonMenuItem(name, name.equals(look.activeTheme()));
+                    item.addActionListener(a -> {
+                        String problem = look.select(name);
+                        status.setText(problem != null ? problem : "Theme: " + name);
+                        repaint();
+                    });
+                    group.add(item);
+                    menu.add(item);
+                }
+                menu.addSeparator();
+                JMenuItem where = new JMenuItem("Edit themes.json\u2026");
+                where.addActionListener(a -> openSettingsFolder());
+                menu.add(where);
+            }
+
+            @Override
+            public void menuDeselected(javax.swing.event.MenuEvent e) {
+            }
+
+            @Override
+            public void menuCanceled(javax.swing.event.MenuEvent e) {
+            }
+        });
+        return menu;
+    }
+
+    private void openSettingsFolder() {
+        Path dir = AppHome.settingsDir();
+        try {
+            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
+                Desktop.getDesktop().open(dir.toFile());
+                return;
+            }
+        } catch (IOException | RuntimeException ignored) {
+            // fall through and show the path instead
+        }
+        JOptionPane.showMessageDialog(this, "Settings files are in:\n" + dir, "Settings", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /** Closes this project, asking about unsaved changes, and returns to the home screen. */
+    private void goHome() {
+        if (!confirmDiscard()) return;
+        autosave.stop();
+        dispose();
+        new HomeWindow().setVisible(true);
+    }
+
+    /** Shows a message in the status bar. */
+    public void showStatus(String text) {
+        status.setText(text);
     }
 
     // ---- export ----
@@ -478,7 +607,7 @@ public final class MainWindow extends JFrame {
         exportPixelSize = ((Number) pixelSize.getValue()).doubleValue();
 
         String base = ed.file() == null ? "creature" : baseName(ed.file());
-        Path f = chooseFile("Export " + exportFormat.label, FileDialog.SAVE, base + exportFormat.extension, exportFormat.extension);
+        Path f = chooseFile("Export " + exportFormat.label, FileDialog.SAVE, null, base + exportFormat.extension, exportFormat.extension);
         if (f == null) return;
         try {
             byte[] data = exportFormat.godot()

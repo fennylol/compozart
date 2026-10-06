@@ -129,7 +129,7 @@ final class RenderView extends JPanel {
             Graphics2D g = (Graphics2D) g0.create();
             Composition c = ed.composition();
             if (fitPending && !c.isEmpty() && getWidth() > 0) fit();
-            g.setColor(UIManager.getColor("Panel.background").darker());
+            g.setColor(Draw.CANVAS);
             g.fillRect(0, 0, getWidth(), getHeight());
             if (c.isEmpty()) {
                 Draw.label(g, c.root == null ? "No root selected." : "Nothing drawn yet.", 16, 24, Draw.MUTED);
