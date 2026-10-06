@@ -1,5 +1,7 @@
 package compozart.ui;
 
+import compozart.text.L10n;
+
 import javax.swing.*;
 import javax.swing.text.JTextComponent;
 import java.awt.*;
@@ -15,7 +17,12 @@ import java.util.function.BooleanSupplier;
  * Bindings live in the window's input map. Menu items only display them.
  */
 public final class KeyMap {
-    public record Def(String id, String label, List<KeyStroke> defaults, Runnable action, BooleanSupplier enabled) {
+    /** An action. Its label is looked up each time it is shown, so it follows the current language. */
+    public record Def(String id, java.util.function.Supplier<String> labelText, List<KeyStroke> defaults, Runnable action,
+                      BooleanSupplier enabled) {
+        public String label() {
+            return labelText.get();
+        }
     }
 
     private final Map<String, Def> defs = new LinkedHashMap<>();
@@ -39,12 +46,18 @@ public final class KeyMap {
         return KeyStroke.getKeyStroke(code, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | InputEvent.SHIFT_DOWN_MASK);
     }
 
-    public void define(String id, String label, Runnable action, KeyStroke... defaults) {
-        define(id, label, action, () -> true, defaults);
+    /** Defines an action whose label is the language file's text for {@code labelKey}. */
+    public void define(String id, String labelKey, Runnable action, KeyStroke... defaults) {
+        define(id, labelKey, action, () -> true, defaults);
     }
 
-    public void define(String id, String label, Runnable action, BooleanSupplier enabled, KeyStroke... defaults) {
-        defs.put(id, new Def(id, label, List.of(defaults), action, enabled));
+    public void define(String id, String labelKey, Runnable action, BooleanSupplier enabled, KeyStroke... defaults) {
+        defs.put(id, new Def(id, () -> L10n.t(labelKey), List.of(defaults), action, enabled));
+    }
+
+    /** Defines an action whose label is computed, for labels with values in them. */
+    public void define(String id, java.util.function.Supplier<String> label, Runnable action, KeyStroke... defaults) {
+        defs.put(id, new Def(id, label, List.of(defaults), action, () -> true));
     }
 
     public Collection<Def> defs() {
@@ -193,17 +206,17 @@ public final class KeyMap {
         Map<String, List<KeyStroke>> next = new HashMap<>();
         for (var e : m.entrySet()) {
             if (!defs.containsKey(e.getKey())) {
-                problems.add("unknown action " + e.getKey());
+                problems.add(L10n.t("keys.error.action", "name", e.getKey()));
                 continue;
             }
             if (!(e.getValue() instanceof List<?> list)) {
-                problems.add(e.getKey() + " should be a list of keys");
+                problems.add(L10n.t("keys.error.list", "name", e.getKey()));
                 continue;
             }
             List<KeyStroke> keys = new ArrayList<>();
             for (Object o : list) {
                 KeyStroke ks = o instanceof String str ? parse(str) : null;
-                if (ks == null) problems.add("unknown key " + o + " for " + e.getKey());
+                if (ks == null) problems.add(L10n.t("keys.error.key", "key", o, "name", e.getKey()));
                 else keys.add(ks);
             }
             next.put(e.getKey(), keys);

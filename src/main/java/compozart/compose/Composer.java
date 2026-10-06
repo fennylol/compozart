@@ -1,6 +1,7 @@
 package compozart.compose;
 
 import compozart.model.*;
+import compozart.text.L10n;
 
 import java.util.*;
 
@@ -41,13 +42,13 @@ public final class Composer {
         Node rootNode = project.rootNode();
         Instance root = null;
         if (project.root == null) {
-            warnings.add("No root node is selected.");
+            warnings.add(L10n.t("compose.warning.noRoot"));
         } else if (rootNode == null) {
-            warnings.add("The root node " + project.root + " does not exist.");
+            warnings.add(L10n.t("compose.warning.rootMissing", "ref", project.root));
         } else {
             root = place(rootNode, null, -1, Xform.IDENTITY, 0, 0x5eedL, Map.of());
         }
-        if (truncated) warnings.add("Stopped at " + MAX_INSTANCES + " instances.");
+        if (truncated) warnings.add(L10n.t("compose.warning.truncated", "count", MAX_INSTANCES));
         return new Composition(root, instances, new ArrayList<>(warnings), truncated, project.palette.size());
     }
 
@@ -61,7 +62,7 @@ public final class Composer {
             inst.slots.add(slot);
             if (instances.size() >= MAX_INSTANCES) {
                 truncated = true;
-                slot.problem = "instance limit reached";
+                slot.problem = L10n.t("compose.slot.limit");
                 continue;
             }
 
@@ -73,7 +74,7 @@ public final class Composer {
                 Counter c = counters.get(comp);
                 if (!inside || c == null) {
                     if (!inside && a.depth == null) {
-                        warnings.add("Depth is not set on " + node.ref() + " → " + a.target + "; using 1.");
+                        warnings.add(L10n.t("compose.warning.noDepth", "from", node.ref(), "to", a.target));
                     }
                     int depth = a.depth == null ? 1 : Math.max(0, a.depth);
                     c = new Counter(a.target, depth, a.endVariant, Set.of());
@@ -81,7 +82,7 @@ public final class Composer {
                 Counter next;
                 if (a.target.equals(c.name)) {
                     if (c.remaining <= 0) {
-                        slot.note = "depth reached";
+                        slot.note = L10n.t("compose.slot.depthReached");
                         continue;
                     }
                     if (c.remaining == 1 && c.endVariant != null) forcedVariant = c.endVariant;
@@ -89,7 +90,7 @@ public final class Composer {
                 } else {
                     // A loop inside the cycle that skips the counted name runs once, then stops.
                     if (c.sinceLast.contains(a.target)) {
-                        slot.note = "loop does not pass through " + c.name;
+                        slot.note = L10n.t("compose.slot.loop", "name", c.name);
                         continue;
                     }
                     Set<String> seen = new HashSet<>(c.sinceLast);
@@ -107,7 +108,7 @@ public final class Composer {
             Node child = resolve(a, forcedVariant, avoid, childPath, slot);
             if (child == null) continue;
             if (child.root == null) {
-                slot.problem = child.ref() + " has no root anchor";
+                slot.problem = L10n.t("compose.slot.noRootAnchor", "ref", child.ref());
                 continue;
             }
             Xform childXf = Xform.attach(xf, a, child.root);
@@ -124,23 +125,23 @@ public final class Composer {
     private Node resolve(NamedAnchor a, String forcedVariant, String avoid, long path, Instance.Slot slot) {
         if (forcedVariant != null) {
             Node n = project.find(a.target, forcedVariant);
-            if (n == null) slot.problem = "no node " + new NodeRef(a.target, forcedVariant);
+            if (n == null) slot.problem = L10n.t("compose.slot.missingVariant", "ref", new NodeRef(a.target, forcedVariant));
             return n;
         }
         if (a.variant != null) {
             Node n = project.find(a.target, a.variant);
-            if (n == null) slot.problem = "no node " + new NodeRef(a.target, a.variant);
+            if (n == null) slot.problem = L10n.t("compose.slot.missingVariant", "ref", new NodeRef(a.target, a.variant));
             return n;
         }
         if (a.target.isEmpty()) {
-            slot.note = "no target set";
+            slot.note = L10n.t("compose.slot.noTarget");
             return null;
         }
         List<Node> all = project.named(a.target);
         List<Node> candidates = all.stream().filter(n -> n.root != null).toList();
         if (candidates.isEmpty()) {
-            if (all.isEmpty()) slot.note = "no node named " + a.target;
-            else slot.problem = "no variant of " + a.target + " has a root anchor";
+            if (all.isEmpty()) slot.note = L10n.t("compose.slot.noNode", "name", a.target);
+            else slot.problem = L10n.t("compose.slot.noRootAnchors", "name", a.target);
             return null;
         }
         if (avoid != null) {

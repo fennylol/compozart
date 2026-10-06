@@ -1,5 +1,7 @@
 package compozart.ui;
 
+import compozart.text.L10n;
+
 import compozart.compose.Composition;
 import compozart.compose.Instance;
 import compozart.model.*;
@@ -40,7 +42,7 @@ final class CreatureTree extends JPanel {
         this.ed = ed;
         this.nodes = nodes;
         this.createNodeNamed = createNodeNamed;
-        JLabel title = new JLabel("Creature");
+        JLabel title = new JLabel(L10n.t("tree.title"));
         title.setFont(title.getFont().deriveFont(Font.BOLD));
         title.setBorder(BorderFactory.createEmptyBorder(6, 8, 4, 8));
         add(title, BorderLayout.NORTH);
@@ -116,7 +118,7 @@ final class CreatureTree extends JPanel {
         try {
             DefaultMutableTreeNode root;
             if (c.root == null) {
-                root = new DefaultMutableTreeNode("No root. Right-click a node in the library and choose Set as root.");
+                root = new DefaultMutableTreeNode(L10n.t("tree.noRoot"));
             } else {
                 root = build(c.root, "r");
             }
@@ -185,17 +187,17 @@ final class CreatureTree extends JPanel {
                 if (socket != null && !socket.target.equals(inst.node.name)) sb.append("<font color='").append(muted).append("'>").append(esc(socket.target)).append(": </font>");
                 sb.append(esc(inst.node.name));
                 if (!inst.node.variant.isEmpty()) sb.append(" [").append(esc(inst.node.variant)).append("]");
-                sb.append("<font color='").append(muted).append("'>&nbsp;&nbsp;layer ").append(inst.layer);
-                if (inst.xform.mirrored()) sb.append(" · mirrored");
-                if (inst.parent == null) sb.append(" · root");
+                sb.append("<font color='").append(muted).append("'>&nbsp;&nbsp;").append(esc(L10n.t("tree.layer", "number", inst.layer)));
+                if (inst.xform.mirrored()) sb.append(" \u00b7 ").append(esc(L10n.t("tree.mirrored")));
+                if (inst.parent == null) sb.append(" \u00b7 ").append(esc(L10n.t("library.isRoot")));
                 sb.append("</font></html>");
                 setText(sb.toString());
                 setIcon(Draw.nodeIcon(inst.node, ed.project().palette, 16));
             } else if (o instanceof SlotRow r) {
                 Instance.Slot s = r.slot();
-                String why = s.problem != null ? s.problem : s.note != null ? s.note : "empty";
+                String why = s.problem != null ? s.problem : s.note != null ? s.note : L10n.t("tree.empty");
                 String color = s.problem != null ? hex(Draw.PROBLEM) : muted;
-                String target = s.anchor.target.isEmpty() ? "anchor " + (s.anchorIndex + 1) : s.anchor.target;
+                String target = s.anchor.target.isEmpty() ? L10n.t("tree.anchorNumber", "number", s.anchorIndex + 1) : s.anchor.target;
                 setText("<html><font color='" + color + "'>" + esc(target) + ": " + esc(why) + "</font></html>");
             } else {
                 setText(String.valueOf(o));
@@ -218,10 +220,10 @@ final class CreatureTree extends JPanel {
         JPopupMenu m = new JPopupMenu();
         if (row instanceof InstRow r) {
             Instance inst = r.inst();
-            JMenuItem open = new JMenuItem("Edit " + inst.node.ref());
+            JMenuItem open = new JMenuItem(L10n.t("tree.menu.edit", "ref", inst.node.ref()));
             open.addActionListener(a -> ed.selectNode(inst.node));
             m.add(open);
-            JMenuItem root = new JMenuItem("Set as root");
+            JMenuItem root = new JMenuItem(L10n.t("library.menu.setRoot"));
             root.setEnabled(inst.parent != null);
             root.addActionListener(a -> nodes.setRoot(inst.node));
             m.add(root);
@@ -234,7 +236,7 @@ final class CreatureTree extends JPanel {
             NamedAnchor a = r.slot().anchor;
             if (!a.target.isEmpty() && ed.project().named(a.target).isEmpty()) {
                 m.addSeparator();
-                JMenuItem create = new JMenuItem("Create node “" + a.target + "”");
+                JMenuItem create = new JMenuItem(L10n.t("anchor.createNode", "name", a.target));
                 create.addActionListener(x -> createNodeNamed.accept(a.target));
                 m.add(create);
             }
@@ -247,37 +249,37 @@ final class CreatureTree extends JPanel {
     /** Menu items that edit the named anchor on {@code owner} at {@code index}. */
     private void anchorItems(JPopupMenu m, Node owner, int index) {
         NamedAnchor a = owner.anchors.get(index);
-        JMenuItem go = new JMenuItem("Go to anchor in " + owner.ref());
+        JMenuItem go = new JMenuItem(L10n.t("tree.menu.goToAnchor", "ref", owner.ref()));
         go.addActionListener(x -> {
             ed.selectNode(owner);
             ed.setTool(Tool.ANCHOR);
             ed.selectAnchor(index);
         });
         m.add(go);
-        JCheckBoxMenuItem mir = new JCheckBoxMenuItem("Mirrored", a.mirrored);
+        JCheckBoxMenuItem mir = new JCheckBoxMenuItem(L10n.t("anchor.mirrored"), a.mirrored);
         mir.addActionListener(x -> ed.edit(null, () -> a.mirrored = mir.isSelected()));
         m.add(mir);
-        JMenuItem layer = new JMenuItem("Layer modifier (" + (a.layerModifier >= 0 ? "+" : "") + a.layerModifier + ")…");
+        JMenuItem layer = new JMenuItem(L10n.t("tree.menu.layer", "value", (a.layerModifier >= 0 ? "+" : "") + a.layerModifier));
         layer.addActionListener(x -> {
-            String s = JOptionPane.showInputDialog(this, "Layer modifier for " + a.target + ":", a.layerModifier);
+            String s = JOptionPane.showInputDialog(this, L10n.t("tree.layer.prompt", "name", a.target), a.layerModifier);
             if (s == null) return;
             try {
                 int v = Integer.parseInt(s.trim().replace("+", ""));
                 ed.edit(null, () -> a.layerModifier = v);
             } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Enter a whole number, like -1 or 2.");
+                JOptionPane.showMessageDialog(this, L10n.t("tree.layer.error"));
             }
         });
         m.add(layer);
-        JMenu variant = new JMenu("Variant");
+        JMenu variant = new JMenu(L10n.t("node.label.variant"));
         ButtonGroup bg = new ButtonGroup();
-        JRadioButtonMenuItem random = new JRadioButtonMenuItem("Random", a.variant == null);
+        JRadioButtonMenuItem random = new JRadioButtonMenuItem(L10n.t("tree.menu.random"), a.variant == null);
         random.addActionListener(x -> ed.edit(null, () -> a.variant = null));
         bg.add(random);
         variant.add(random);
         List<Node> options = ed.project().named(a.target);
         for (Node n : options) {
-            JRadioButtonMenuItem item = new JRadioButtonMenuItem(n.variant.isEmpty() ? "(unnamed variant)" : n.variant,
+            JRadioButtonMenuItem item = new JRadioButtonMenuItem(n.variant.isEmpty() ? L10n.t("anchor.variant.unnamed") : n.variant,
                     n.variant.equals(a.variant));
             item.addActionListener(x -> ed.edit(null, () -> a.variant = n.variant));
             bg.add(item);

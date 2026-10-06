@@ -1,5 +1,7 @@
 package compozart.ui;
 
+import compozart.text.L10n;
+
 import compozart.compose.Composition;
 import compozart.compose.Instance;
 import compozart.model.*;
@@ -15,21 +17,21 @@ final class RenderView extends JPanel {
     private final Editor ed;
     private final Canvas canvas = new Canvas();
     private final JLabel seed = new JLabel();
-    private final JCheckBox anchors = new JCheckBox("Anchors");
-    private final JCheckBox outline = new JCheckBox("Outline", true);
+    private final JCheckBox anchors = new JCheckBox(L10n.t("render.anchors"));
+    private final JCheckBox outline = new JCheckBox(L10n.t("render.outline"), true);
 
     RenderView(Editor ed) {
         super(new BorderLayout());
         this.ed = ed;
-        JLabel title = new JLabel("Render");
+        JLabel title = new JLabel(L10n.t("render.title"));
         title.setFont(title.getFont().deriveFont(Font.BOLD));
-        JButton fit = new JButton("Fit");
+        JButton fit = new JButton(L10n.t("render.fit"));
         fit.addActionListener(e -> canvas.fit());
-        JButton reroll = new JButton("Reroll");
-        reroll.setToolTipText("Pick new random variants");
+        JButton reroll = new JButton(L10n.t("render.reroll"));
+        reroll.setToolTipText(L10n.t("render.reroll.tip"));
         reroll.addActionListener(e -> reroll());
-        anchors.setToolTipText("Show every anchor in the composed creature");
-        outline.setToolTipText("Outline every placement of the node being edited");
+        anchors.setToolTipText(L10n.t("render.anchors.tip"));
+        outline.setToolTipText(L10n.t("render.outline.tip"));
         anchors.addActionListener(e -> canvas.repaint());
         outline.addActionListener(e -> canvas.repaint());
         seed.setForeground(Draw.MUTED);
@@ -44,10 +46,10 @@ final class RenderView extends JPanel {
         add(canvas, BorderLayout.CENTER);
         ed.addListener(what -> {
             if (what.contains(Editor.Change.HISTORY)) canvas.fitPending = true;
-            seed.setText("seed " + ed.project().seed);
+            seed.setText(L10n.t("render.seed", "value", ed.project().seed));
             canvas.repaint();
         });
-        seed.setText("seed " + ed.project().seed);
+        seed.setText(L10n.t("render.seed", "value", ed.project().seed));
     }
 
     void reroll() {
@@ -132,7 +134,7 @@ final class RenderView extends JPanel {
             g.setColor(Draw.CANVAS);
             g.fillRect(0, 0, getWidth(), getHeight());
             if (c.isEmpty()) {
-                Draw.label(g, c.root == null ? "No root selected." : "Nothing drawn yet.", 16, 24, Draw.MUTED);
+                Draw.label(g, c.root == null ? L10n.t("render.noRoot") : L10n.t("render.empty"), 16, 24, Draw.MUTED);
                 g.dispose();
                 return;
             }
@@ -168,8 +170,9 @@ final class RenderView extends JPanel {
                     }
                 }
             }
-            String size = c.width + "×" + c.height + " · " + c.layers.size() + (c.layers.size() == 1 ? " layer" : " layers")
-                    + " · " + c.instances.size() + " parts · " + zoom + "×";
+            String size = L10n.t("render.info", "width", c.width, "height", c.height,
+                    "layers", L10n.plural("export.layers", c.layers.size()),
+                    "parts", L10n.plural("export.parts", c.instances.size()), "zoom", zoom);
             g.setFont(getFont().deriveFont(11f));
             Draw.label(g, size, 8, getHeight() - 8, Draw.MUTED);
             g.dispose();

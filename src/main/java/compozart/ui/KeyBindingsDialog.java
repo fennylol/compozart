@@ -1,5 +1,7 @@
 package compozart.ui;
 
+import compozart.text.L10n;
+
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -19,7 +21,7 @@ final class KeyBindingsDialog extends JDialog {
     private boolean applied;
 
     KeyBindingsDialog(Frame owner, KeyMap keys) {
-        super(owner, "Keyboard shortcuts", true);
+        super(owner, L10n.t("keys.title"), true);
         this.keys = keys;
         this.defs = new ArrayList<>(keys.defs());
         for (KeyMap.Def d : defs) working.put(d.id(), new ArrayList<>(keys.bindings(d.id())));
@@ -33,16 +35,16 @@ final class KeyBindingsDialog extends JDialog {
             public Component getTableCellRendererComponent(JTable t, Object v, boolean sel, boolean f, int row, int col) {
                 super.getTableCellRendererComponent(t, v, sel, f, row, col);
                 setForeground(col == 1 && hasConflict(defs.get(row).id()) ? Draw.PROBLEM : sel ? t.getSelectionForeground() : t.getForeground());
-                setToolTipText(col == 1 && hasConflict(defs.get(row).id()) ? "Another action uses the same key" : null);
+                setToolTipText(col == 1 && hasConflict(defs.get(row).id()) ? L10n.t("keys.conflict") : null);
                 return this;
             }
         });
 
-        JButton add = new JButton("Add key…");
+        JButton add = new JButton(L10n.t("keys.add"));
         add.addActionListener(e -> capture());
-        JButton clear = new JButton("Clear");
+        JButton clear = new JButton(L10n.t("keys.clear"));
         clear.addActionListener(e -> edit(l -> l.clear()));
-        JButton reset = new JButton("Reset");
+        JButton reset = new JButton(L10n.t("keys.reset"));
         reset.addActionListener(e -> {
             int r = table.getSelectedRow();
             if (r < 0) return;
@@ -50,17 +52,17 @@ final class KeyBindingsDialog extends JDialog {
             model.fireTableDataChanged();
             table.setRowSelectionInterval(r, r);
         });
-        JButton resetAll = new JButton("Reset all");
+        JButton resetAll = new JButton(L10n.t("keys.resetAll"));
         resetAll.addActionListener(e -> {
             for (KeyMap.Def d : defs) working.put(d.id(), new ArrayList<>(d.defaults()));
             model.fireTableDataChanged();
         });
-        JButton ok = new JButton("OK");
+        JButton ok = new JButton(UIManager.getString("OptionPane.okButtonText"));
         ok.addActionListener(e -> {
             applied = true;
             dispose();
         });
-        JButton cancel = new JButton("Cancel");
+        JButton cancel = new JButton(UIManager.getString("OptionPane.cancelButtonText"));
         cancel.addActionListener(e -> dispose());
 
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -75,7 +77,7 @@ final class KeyBindingsDialog extends JDialog {
         south.add(left, BorderLayout.WEST);
         south.add(right, BorderLayout.EAST);
 
-        JLabel help = new JLabel("Select an action, then Add key… and press the new key. Double-click a row to add a key.");
+        JLabel help = new JLabel(L10n.t("keys.help"));
         help.setBorder(BorderFactory.createEmptyBorder(8, 8, 4, 8));
         help.setForeground(Draw.MUTED);
         table.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -119,8 +121,8 @@ final class KeyBindingsDialog extends JDialog {
     private void capture() {
         int r = table.getSelectedRow();
         if (r < 0) return;
-        JDialog d = new JDialog(this, "Press a key", true);
-        JLabel l = new JLabel("Press the new key for “" + defs.get(r).label() + "” (Esc to cancel)", SwingConstants.CENTER);
+        JDialog d = new JDialog(this, L10n.t("keys.press.title"), true);
+        JLabel l = new JLabel(L10n.t("keys.press", "action", defs.get(r).label()), SwingConstants.CENTER);
         l.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
         l.setFocusable(true);
         d.add(l);
@@ -162,7 +164,7 @@ final class KeyBindingsDialog extends JDialog {
 
         @Override
         public String getColumnName(int c) {
-            return c == 0 ? "Action" : "Keys";
+            return c == 0 ? L10n.t("keys.column.action") : L10n.t("keys.column.keys");
         }
 
         @Override

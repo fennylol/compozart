@@ -1,5 +1,7 @@
 package compozart.ui;
 
+import compozart.text.L10n;
+
 import compozart.io.ProjectIO;
 import compozart.model.Palette;
 import compozart.model.Project;
@@ -25,14 +27,14 @@ final class PalettePanel extends JPanel {
     PalettePanel(Editor ed) {
         super(new BorderLayout());
         this.ed = ed;
-        JLabel title = new JLabel("Palette");
+        JLabel title = new JLabel(L10n.t("palette.title"));
         title.setFont(title.getFont().deriveFont(Font.BOLD));
         JButton add = new JButton("+");
-        add.setToolTipText("Add a color (copies the selected one)");
+        add.setToolTipText(L10n.t("palette.add.tip"));
         add.setMargin(new Insets(1, 6, 1, 6));
         add.addActionListener(e -> addColor());
-        JButton del = new JButton("Del");
-        del.setToolTipText("Delete the selected color");
+        JButton del = new JButton(L10n.t("palette.delete"));
+        del.setToolTipText(L10n.t("palette.delete.tip"));
         del.setMargin(new Insets(1, 6, 1, 6));
         del.addActionListener(e -> deleteColor());
         JPanel head = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
@@ -50,7 +52,7 @@ final class PalettePanel extends JPanel {
 
         JPanel nameRow = new JPanel(new BorderLayout(6, 0));
         nameRow.setBorder(BorderFactory.createEmptyBorder(4, 8, 0, 8));
-        nameRow.add(new JLabel("Name"), BorderLayout.WEST);
+        nameRow.add(new JLabel(L10n.t("node.label.name")), BorderLayout.WEST);
         nameRow.add(name, BorderLayout.CENTER);
         name.addActionListener(e -> commitName());
         name.addFocusListener(new FocusAdapter() {
@@ -104,7 +106,7 @@ final class PalettePanel extends JPanel {
     private void addColor() {
         Palette pal = ed.project().palette;
         if (pal.full()) {
-            JOptionPane.showMessageDialog(this, "The palette already has " + Palette.MAX + " entries.");
+            JOptionPane.showMessageDialog(this, L10n.t("palette.full", "max", Palette.MAX));
             return;
         }
         int argb = ed.color() > 0 ? pal.argb(ed.color()) : 0xff808080;
@@ -117,7 +119,7 @@ final class PalettePanel extends JPanel {
         int i = ed.color();
         Project p = ed.project();
         if (i <= 0) {
-            JOptionPane.showMessageDialog(this, "Index 0 is always clear and cannot be deleted.");
+            JOptionPane.showMessageDialog(this, L10n.t("palette.clearLocked"));
             return;
         }
         int replacement;
@@ -137,9 +139,9 @@ final class PalettePanel extends JPanel {
                 }
             });
             JPanel form = new JPanel(new BorderLayout(0, 6));
-            form.add(new JLabel("Pixels use color #" + i + ". Move them to:"), BorderLayout.NORTH);
+            form.add(new JLabel(L10n.t("palette.remap", "index", i)), BorderLayout.NORTH);
             form.add(to, BorderLayout.CENTER);
-            int r = JOptionPane.showConfirmDialog(this, form, "Delete color", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+            int r = JOptionPane.showConfirmDialog(this, form, L10n.t("palette.delete.title"), JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
             if (r != JOptionPane.OK_OPTION) return;
             replacement = (Integer) to.getSelectedItem();
         } else {

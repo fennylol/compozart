@@ -1,5 +1,7 @@
 package compozart.ui;
 
+import compozart.text.L10n;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -16,82 +18,79 @@ final class ToolHelp {
      */
     static String html(Tool tool, Function<String, String> keys, int width) {
         List<String> lines = new ArrayList<>();
-        List<String> sizeKeys = new ArrayList<>();
-        for (String id : List.of("brush.smaller", "brush.larger")) if (!keys.apply(id).isEmpty()) sizeKeys.add(keys.apply(id));
-        String brush = (sizeKeys.isEmpty() ? "" : String.join(" / ", sizeKeys) + ", ") + "Ctrl+wheel or the Size box";
+        String smaller = keys.apply("brush.smaller"), larger = keys.apply("brush.larger");
+        String brush = smaller.isEmpty() || larger.isEmpty() ? L10n.t("help.brushSize")
+                : L10n.t("help.brushSize.keys", "smaller", smaller, "larger", larger);
         switch (tool) {
             case DRAW -> {
-                lines.add("Drag to paint with the selected color.");
-                lines.add("Brush size: " + brush + ".");
-                lines.add("Right-drag adds an anchor aimed at the cursor. Shift+right-drag places the root anchor.");
-                lines.add("Right-click a pixel with an anchor to open its menu.");
-                lines.add("Alt+click picks a color.");
+                lines.add(L10n.t("help.draw.paint"));
+                lines.add(brush);
+                lines.add(L10n.t("help.draw.anchor"));
+                lines.add(L10n.t("help.draw.menu"));
+                lines.add(L10n.t("help.pickColor"));
             }
             case ERASER -> {
-                lines.add("Drag to erase pixels.");
-                lines.add("Right-click or right-drag erases anchors.");
-                lines.add("Brush size: " + brush + ".");
+                lines.add(L10n.t("help.eraser.erase"));
+                lines.add(L10n.t("help.eraser.anchors"));
+                lines.add(brush);
             }
             case FILL -> {
-                lines.add("Click to fill the connected area of one color, up, down, left and right.");
-                lines.add("Right-click fills with clear.");
-                lines.add("Alt+click picks a color.");
+                lines.add(L10n.t("help.fill.fill"));
+                lines.add(L10n.t("help.fill.clear"));
+                lines.add(L10n.t("help.pickColor"));
             }
             case SELECT -> {
-                lines.add("Drag to select a rectangle.");
-                lines.add("Drag inside the selection to move it. Ctrl+drag moves a copy; Ctrl+drag again stamps it and takes another.");
-                lines.add(keyOr(keys, "edit.deselect", "Deselect") + " drops a moved selection and deselects.");
-                lines.add(keyOr(keys, "edit.delete", "Delete") + " clears the selected pixels.");
-                lines.add(keyOr(keys, "edit.selectAll", "Select all") + " selects the whole node.");
-                lines.add("While a selection exists, every tool paints only inside it.");
+                lines.add(L10n.t("help.select.drag"));
+                lines.add(L10n.t("help.select.move"));
+                lines.add(L10n.t("help.select.deselect", "key", keyOr(keys, "edit.deselect")));
+                lines.add(L10n.t("help.select.delete", "key", keyOr(keys, "edit.delete")));
+                lines.add(L10n.t("help.select.all", "key", keyOr(keys, "edit.selectAll")));
+                lines.add(L10n.t("help.select.limit"));
             }
             case EYEDROPPER -> {
-                lines.add("Click or drag to pick the color under the cursor.");
-                lines.add("Alt+click does the same from any drawing tool.");
+                lines.add(L10n.t("help.eyedropper.pick"));
+                lines.add(L10n.t("help.eyedropper.alt"));
             }
             case LINE -> {
-                lines.add("Drag from one end to the other.");
-                lines.add("Right-drag draws with clear.");
+                lines.add(L10n.t("help.line.drag"));
+                lines.add(L10n.t("help.clearDrag"));
             }
             case RECT -> {
-                lines.add("Drag from corner to corner.");
-                lines.add("Filled, in the second toolbar row, fills it in." + bound(keys, "view.rectFill", " Toggle: "));
-                lines.add("Right-drag draws with clear.");
+                lines.add(L10n.t("help.rect.drag"));
+                String k = keys.apply("view.rectFill");
+                lines.add(k.isEmpty() ? L10n.t("help.rect.filled") : L10n.t("help.rect.filled.key", "key", k));
+                lines.add(L10n.t("help.clearDrag"));
             }
             case ANCHOR -> {
-                lines.add("Drag from a pixel to add an anchor aimed at the cursor.");
-                lines.add("A node's first anchor becomes its root anchor. Shift+drag places or moves the root anchor.");
-                lines.add("Drag an anchor to move it. Arrow keys point the selected one.");
-                lines.add("Right-click or right-drag erases anchors. " + keyOr(keys, "edit.delete", "Delete") + " removes the selected one.");
-                lines.add("Double-click an anchor to edit its settings.");
+                lines.add(L10n.t("help.anchor.add"));
+                lines.add(L10n.t("help.anchor.first"));
+                lines.add(L10n.t("help.anchor.move"));
+                lines.add(L10n.t("help.anchor.erase", "key", keyOr(keys, "edit.delete")));
+                lines.add(L10n.t("help.anchor.edit"));
             }
         }
-        if (tool.symmetric()) lines.add("Symmetry, in the second toolbar row, mirrors what you draw.");
-        if (tool.symmetric()) lines.add("With a selection active, only pixels inside it change.");
+        if (tool.symmetric()) lines.add(L10n.t("help.symmetry"));
+        if (tool.symmetric()) lines.add(L10n.t("help.selectionLimit"));
 
         // Swing's HTML renderer scales CSS px by 1.3 unless W3C units are switched on, which labels cannot do.
         StringBuilder sb = new StringBuilder("<html><body style='width:" + Math.round(width / 1.3) + "px'>");
         for (String l : lines) sb.append("&bull;&nbsp;").append(esc(l)).append("<br>");
-        sb.append("<br><font color='").append(muted()).append("'>Canvas: wheel zooms, middle-drag or Space+drag pans. ")
-                .append(esc(keyOr(keys, "parent.prev", "") + " / " + keyOr(keys, "parent.next", "")))
-                .append(" cycle the parent shown behind the node.</font></body></html>");
+        sb.append("<br><font color='").append(muted()).append("'>")
+                .append(esc(L10n.t("help.canvas", "prev", keyOr(keys, "parent.prev"), "next", keyOr(keys, "parent.next"))))
+                .append("</font></body></html>");
         return sb.toString();
     }
 
     /** The heading: the tool's name and its key. */
     static String title(Tool tool, Function<String, String> keys) {
         String k = keys.apply("tool." + tool.id);
-        return k.isEmpty() ? tool.label : tool.label + " (" + k + ")";
+        return k.isEmpty() ? tool.label() : L10n.t("help.title", "tool", tool.label(), "key", k);
     }
 
-    private static String keyOr(Function<String, String> keys, String id, String fallback) {
+    /** The action's key, or its name when it has no key. */
+    private static String keyOr(Function<String, String> keys, String id) {
         String k = keys.apply(id);
-        return k.isEmpty() ? fallback : k;
-    }
-
-    private static String bound(Function<String, String> keys, String id, String prefix) {
-        String k = keys.apply(id);
-        return k.isEmpty() ? "" : prefix + k + ".";
+        return k.isEmpty() ? L10n.t("action." + id) : k;
     }
 
     private static String muted() {

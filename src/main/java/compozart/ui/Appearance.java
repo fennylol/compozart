@@ -5,6 +5,7 @@ import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import compozart.io.Json;
 import compozart.io.ProjectIO;
+import compozart.text.L10n;
 
 import javax.swing.*;
 import java.awt.Color;
@@ -83,7 +84,7 @@ public final class Appearance {
             modified.put(name, Files.getLastModifiedTime(p).toMillis());
             return Files.readString(p, StandardCharsets.UTF_8);
         } catch (IOException e) {
-            problems.add("could not use " + p + " (" + e.getMessage() + "); using built-in " + name);
+            problems.add(L10n.t("appearance.error.file", "file", p, "reason", e.getMessage(), "name", name));
             return defaultText(name);
         }
     }
@@ -105,7 +106,7 @@ public final class Appearance {
         if (t) loadThemes(problems);
         if (i) loadIcons(problems);
         apply();
-        return problems.isEmpty() ? "Reloaded " + (t && i ? THEMES + " and " + ICONS : t ? THEMES : ICONS)
+        return problems.isEmpty() ? L10n.t("settings.reloaded", "file", t && i ? THEMES + ", " + ICONS : t ? THEMES : ICONS)
                 : String.join("; ", problems);
     }
 
@@ -124,7 +125,7 @@ public final class Appearance {
         }
         if (themes.isEmpty()) themes.putAll(builtIn);
         if (active == null || !themes.containsKey(active)) {
-            if (active != null) problems.add(THEMES + ": no theme named “" + active + "”");
+            if (active != null) problems.add(L10n.t("appearance.error.noTheme", "file", THEMES, "name", active));
             active = themes.keySet().iterator().next();
         }
     }
@@ -145,7 +146,7 @@ public final class Appearance {
             Map<Character, Color> icons = new LinkedHashMap<>(fallback == null ? Map.of() : fallback.icons());
             for (var c : parseColors(t.get("icons"), e.getKey(), problems).entrySet()) {
                 if (c.getKey().length() == 1) icons.put(c.getKey().charAt(0), c.getValue());
-                else problems.add("theme " + e.getKey() + ": icon color keys are single letters, not “" + c.getKey() + "”");
+                else problems.add(L10n.t("appearance.error.iconKey", "name", e.getKey(), "key", c.getKey()));
             }
             out.put(e.getKey(), new Theme(e.getKey(), dark, flatlaf, colors, icons));
         }
@@ -159,7 +160,7 @@ public final class Appearance {
             try {
                 out.put(e.getKey(), new Color(ProjectIO.parseColor(String.valueOf(e.getValue())), true));
             } catch (IllegalArgumentException ex) {
-                problems.add("theme " + theme + ": " + e.getKey() + " is not a color");
+                problems.add(L10n.t("appearance.error.color", "name", theme, "key", e.getKey()));
             }
         }
         return out;
@@ -195,7 +196,7 @@ public final class Appearance {
             modified.put(THEMES, Files.getLastModifiedTime(p).toMillis());
             return null;
         } catch (IOException | RuntimeException e) {
-            return "Theme applied, but could not save the choice to " + p + ": " + e.getMessage();
+            return L10n.t("appearance.error.save", "file", p, "reason", e.getMessage());
         }
     }
 
@@ -224,7 +225,7 @@ public final class Appearance {
                 ok = grid[i].length() == PixelIcon.SIZE;
             }
             if (ok) out.put(e.getKey(), grid);
-            else problems.add(ICONS + ": " + e.getKey() + " is not 16 rows of 16 characters; using the built-in one");
+            else problems.add(L10n.t("appearance.error.icon", "file", ICONS, "name", e.getKey()));
         }
         return out;
     }

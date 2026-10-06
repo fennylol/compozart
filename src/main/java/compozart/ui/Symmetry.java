@@ -1,22 +1,25 @@
 package compozart.ui;
 
+import compozart.text.L10n;
+
 import java.awt.Point;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
 /** Drawing symmetry inside one node. Mirror axes go through the canvas center. */
 public enum Symmetry {
-    NONE("None"),
-    LEFT_RIGHT("Left / right"),
-    TOP_BOTTOM("Top / bottom"),
-    QUAD("Quad"),
-    DIAGONAL_MAIN("Diagonal \\"),
-    DIAGONAL_ANTI("Diagonal /");
+    NONE("symmetry.none"),
+    LEFT_RIGHT("symmetry.leftRight"),
+    TOP_BOTTOM("symmetry.topBottom"),
+    QUAD("symmetry.quad"),
+    DIAGONAL_MAIN("symmetry.diagonalMain"),
+    DIAGONAL_ANTI("symmetry.diagonalAnti");
 
-    public final String label;
+    /** The key of the mode's name in the language file. */
+    public final String key;
 
-    Symmetry(String label) {
-        this.label = label;
+    Symmetry(String key) {
+        this.key = key;
     }
 
     /** The pixel and its mirror images on a canvas of the given size, without duplicates. */
@@ -42,6 +45,6 @@ public enum Symmetry {
 
     @Override
     public String toString() {
-        return label;
+        return L10n.t(key);
     }
 }

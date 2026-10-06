@@ -1,5 +1,7 @@
 package compozart.ui;
 
+import compozart.text.L10n;
+
 import compozart.color.OkLab;
 import compozart.io.ProjectIO;
 import compozart.model.Palette;
@@ -30,7 +32,7 @@ final class ColorEditor extends JPanel {
     private final JSpinner alphaSpinner = new JSpinner(new SpinnerNumberModel(255, 0, 255, 1));
     private final JTextField hex = new JTextField(9);
     private final JLabel gamut = new JLabel(" ");
-    private final JLabel disabledNote = new JLabel("Index 0 is always clear.");
+    private final JLabel disabledNote = new JLabel(L10n.t("color.clearNote"));
 
     ColorEditor(Editor ed) {
         super(new GridBagLayout());
@@ -89,12 +91,12 @@ final class ColorEditor extends JPanel {
         add(alphaSpinner, at(4, 2, 1));
 
         JPanel hexRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
-        hexRow.add(new JLabel("Hex"));
+        hexRow.add(new JLabel(L10n.t("color.hex")));
         hexRow.add(hex);
         gamut.setForeground(Draw.WARNING);
         hexRow.add(gamut);
         add(hexRow, at(5, 0, 3));
-        hex.setToolTipText("#rrggbb or #rrggbbaa");
+        hex.setToolTipText(L10n.t("color.hex.tip"));
         hex.addActionListener(e -> fromHex());
         hex.addFocusListener(new FocusAdapter() {
             @Override
@@ -284,7 +286,7 @@ final class ColorEditor extends JPanel {
             hex.setEnabled(on);
             if (!hex.hasFocus()) hex.setText(ProjectIO.hexColor(ed.project().palette.argb(Math.max(0, Math.min(ed.color(), ed.project().palette.size() - 1)))));
             boolean clamped = on && OkLab.map(new OkLab.Lch(l, c, h)).clamped();
-            gamut.setText(clamped ? "Outside sRGB: chroma reduced" : " ");
+            gamut.setText(clamped ? L10n.t("color.gamut") : " ");
             disabledNote.setVisible(!on);
         } finally {
             updating = false;

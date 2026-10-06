@@ -2,6 +2,7 @@ package compozart;
 
 import compozart.io.ProjectIO;
 import compozart.model.Project;
+import compozart.text.L10n;
 import compozart.ui.MainWindow;
 
 import javax.swing.*;
@@ -13,7 +14,7 @@ public final class Main {
     }
 
     public static void main(String[] args) {
-        String appearanceProblems = compozart.ui.Appearance.get().loadAndApply();
+        String appearanceProblems = compozart.ui.Startup.prepare();
         UIManager.put("ScrollBar.showButtons", false);
         UIManager.put("SplitPane.dividerSize", 6);
 
@@ -33,14 +34,14 @@ public final class Main {
                     project = ProjectIO.load(f);
                     file = f;
                 } catch (Exception e) {
-                    error = "Could not open " + f + ":\n" + e.getMessage();
+                    error = L10n.t("dialog.open.error", "file", f, "reason", e.getMessage());
                 }
             } else {
-                error = f + " does not exist.";
+                error = L10n.t("dialog.open.missing", "file", f);
             }
             MainWindow w = new MainWindow(project, file);
             w.setVisible(true);
-            if (error != null) JOptionPane.showMessageDialog(w, error, "Open", JOptionPane.ERROR_MESSAGE);
+            if (error != null) JOptionPane.showMessageDialog(w, error, L10n.t("dialog.open.errorTitle"), JOptionPane.ERROR_MESSAGE);
             if (appearanceProblems != null) w.showStatus(appearanceProblems);
         });
     }

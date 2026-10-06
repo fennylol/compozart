@@ -1,5 +1,7 @@
 package compozart.ui;
 
+import compozart.text.L10n;
+
 import compozart.compose.NameGraph;
 import compozart.model.*;
 
@@ -13,9 +15,6 @@ import java.util.function.Consumer;
 
 /** Properties of the selected anchor. */
 final class AnchorPanel extends JPanel {
-    private static final String RANDOM = "(random)";
-    private static final String UNNAMED = "(unnamed variant)";
-    private static final String NONE = "(none)";
 
     private final Editor ed;
     private final AnchorMenus menus;
@@ -28,15 +27,15 @@ final class AnchorPanel extends JPanel {
     private final JLabel title = new JLabel();
 
     private final JComboBox<String> target = new JComboBox<>();
-    private final JComboBox<String> variant = new JComboBox<>();
+    private final JComboBox<Choice> variant = new JComboBox<>();
     private final JTextField group = new JTextField();
     private final JSpinner layer = new JSpinner(new SpinnerNumberModel(1, -999, 999, 1));
-    private final JCheckBox mirrored = new JCheckBox("Mirrored");
-    private final JCheckBox depthSet = new JCheckBox("Depth");
+    private final JCheckBox mirrored = new JCheckBox(L10n.t("anchor.mirrored"));
+    private final JCheckBox depthSet = new JCheckBox(L10n.t("anchor.depth"));
     private final JSpinner depth = new JSpinner(new SpinnerNumberModel(1, 0, 999, 1));
     private final JLabel depthNote = new JLabel();
-    private final JComboBox<String> endVariant = new JComboBox<>();
-    private final JLabel endLabel = new JLabel("End variant");
+    private final JComboBox<Choice> endVariant = new JComboBox<>();
+    private final JLabel endLabel = new JLabel(L10n.t("anchor.endVariant"));
     private final JLabel namedPos = new JLabel();
     private final JLabel rootPos = new JLabel();
     private final Map<Dir, JToggleButton> namedDirs = new EnumMap<>(Dir.class);
@@ -121,7 +120,7 @@ final class AnchorPanel extends JPanel {
         ButtonGroup bg = new ButtonGroup();
         for (Dir d : Dir.values()) {
             JToggleButton b = new JToggleButton(arrows[d.ordinal()]);
-            b.setToolTipText("Point " + d.name().toLowerCase(Locale.ROOT));
+            b.setToolTipText(L10n.t(new String[]{"anchor.point.up", "anchor.point.right", "anchor.point.down", "anchor.point.left"}[d.ordinal()]));
             b.setMargin(new Insets(2, 4, 2, 4));
             b.addActionListener(e -> {
                 if (!updating) menus.point(d);
@@ -135,9 +134,9 @@ final class AnchorPanel extends JPanel {
 
     private JComponent rootCard() {
         Form f = new Form();
-        f.add("Points", dirButtons(rootDirs));
-        f.add("Pixel", rootPos);
-        JButton del = new JButton("Delete");
+        f.add(L10n.t("anchor.points"), dirButtons(rootDirs));
+        f.add(L10n.t("anchor.pixel"), rootPos);
+        JButton del = new JButton(L10n.t("anchor.deleteButton"));
         del.addActionListener(e -> menus.delete());
         f.add((String) null, row(del));
         f.end();
@@ -147,15 +146,15 @@ final class AnchorPanel extends JPanel {
     private JComponent namedCard() {
         Form f = new Form();
         target.setEditable(true);
-        target.setToolTipText("The node name that attaches here");
-        f.add("Target", target);
-        variant.setToolTipText("Which variant attaches. Random picks one with the project seed.");
-        f.add("Variant", variant);
-        group.setToolTipText("Random anchors with the same target and group get the same pick");
-        f.add("Group", group);
-        layer.setToolTipText("The child's layer relative to this node");
-        f.add("Layer +/-", layer);
-        mirrored.setToolTipText("Reflect the child and its subtree across its root arrow");
+        target.setToolTipText(L10n.t("anchor.target.tip"));
+        f.add(L10n.t("anchor.target"), target);
+        variant.setToolTipText(L10n.t("anchor.variant.tip"));
+        f.add(L10n.t("node.label.variant"), variant);
+        group.setToolTipText(L10n.t("anchor.group.tip"));
+        f.add(L10n.t("anchor.group"), group);
+        layer.setToolTipText(L10n.t("anchor.layer.tip"));
+        f.add(L10n.t("anchor.layer"), layer);
+        mirrored.setToolTipText(L10n.t("anchor.mirrored.tip"));
         f.add((String) null, mirrored);
         JPanel depthRow = new JPanel(new BorderLayout(4, 0));
         depthRow.add(depth, BorderLayout.CENTER);
@@ -163,24 +162,24 @@ final class AnchorPanel extends JPanel {
         depthNote.setForeground(Draw.MUTED);
         depthNote.setFont(depthNote.getFont().deriveFont(11f));
         f.add((String) null, depthNote);
-        endVariant.setToolTipText("The variant used for the last repetition");
+        endVariant.setToolTipText(L10n.t("anchor.endVariant.tip"));
         f.add(endLabel, endVariant);
-        f.add("Points", dirButtons(namedDirs));
-        f.add("Pixel", namedPos);
+        f.add(L10n.t("anchor.points"), dirButtons(namedDirs));
+        f.add(L10n.t("anchor.pixel"), namedPos);
 
-        JButton open = new JButton("Open…");
-        open.setToolTipText("Open the node that attaches here");
+        JButton open = new JButton(L10n.t("anchor.open"));
+        open.setToolTipText(L10n.t("anchor.open.tip"));
         open.addActionListener(e -> {
             NamedAnchor a = selected();
             if (a != null) menus.openAttached(a, open, 0, open.getHeight());
         });
         JButton up = new JButton("▲");
-        up.setToolTipText("Draw earlier among same-layer siblings");
+        up.setToolTipText(L10n.t("anchor.drawEarlier.tip"));
         up.addActionListener(e -> menus.reorder(-1));
         JButton down = new JButton("▼");
-        down.setToolTipText("Draw later among same-layer siblings");
+        down.setToolTipText(L10n.t("anchor.drawLater.tip"));
         down.addActionListener(e -> menus.reorder(1));
-        JButton del = new JButton("Delete");
+        JButton del = new JButton(L10n.t("anchor.deleteButton"));
         del.addActionListener(e -> menus.delete());
         f.add((String) null, row(open, up, down, del));
         f.end();
@@ -196,12 +195,14 @@ final class AnchorPanel extends JPanel {
         });
         variant.addActionListener(e -> {
             if (updating) return;
-            String v = choiceToVariant((String) variant.getSelectedItem(), RANDOM);
+            Choice c = (Choice) variant.getSelectedItem();
+            String v = c == null ? null : c.value();
             editAnchor("variant", a -> a.variant = v);
         });
         endVariant.addActionListener(e -> {
             if (updating) return;
-            String v = choiceToVariant((String) endVariant.getSelectedItem(), NONE);
+            Choice c = (Choice) endVariant.getSelectedItem();
+            String v = c == null ? null : c.value();
             editAnchor("endVariant", a -> a.endVariant = v);
         });
         group.addActionListener(e -> commitGroup());
@@ -276,17 +277,6 @@ final class AnchorPanel extends JPanel {
         return false;
     }
 
-    private String choiceToVariant(String choice, String nullLabel) {
-        if (choice == null || choice.equals(nullLabel)) return null;
-        if (choice.equals(UNNAMED)) return "";
-        if (choice.endsWith(" (missing)")) choice = choice.substring(0, choice.length() - 10);
-        return choice;
-    }
-
-    private String variantToChoice(String v, String nullLabel) {
-        if (v == null) return nullLabel;
-        return v.isEmpty() ? UNNAMED : v;
-    }
 
     /** Called when the canvas creates an anchor, so the target name can be typed right away. */
     /** Puts the keyboard in the selected anchor's settings: the target name, or the root anchor's direction. */
@@ -339,14 +329,14 @@ final class AnchorPanel extends JPanel {
                 refreshHelp();
                 cards.show(body, "none");
             } else if (sel == Editor.ROOT_ANCHOR) {
-                title.setText("Root anchor");
+                title.setText(L10n.t("anchor.title.root"));
                 RootAnchor r = n.root;
                 rootDirs.get(r.dir()).setSelected(true);
-                rootPos.setText("x " + r.x() + ", y " + r.y());
+                rootPos.setText(L10n.t("anchor.position", "x", r.x(), "y", r.y()));
                 cards.show(body, "root");
             } else {
                 NamedAnchor a = n.anchors.get(sel);
-                title.setText("Named anchor " + (sel + 1) + " of " + n.anchors.size());
+                title.setText(L10n.t("anchor.title.named", "index", sel + 1, "count", n.anchors.size()));
                 refreshNamed(n, a, switched);
                 cards.show(body, "named");
             }
@@ -366,9 +356,9 @@ final class AnchorPanel extends JPanel {
         }
 
         List<String> variants = new ArrayList<>();
-        for (Node x : p.named(a.target)) variants.add(variantToChoice(x.variant, RANDOM));
-        fillVariantCombo(variant, RANDOM, variants, a.variant);
-        fillVariantCombo(endVariant, NONE, variants, a.endVariant);
+        for (Node x : p.named(a.target)) variants.add(x.variant);
+        fillVariantCombo(variant, L10n.t("anchor.variant.random"), variants, a.variant);
+        fillVariantCombo(endVariant, L10n.t("anchor.variant.none"), variants, a.endVariant);
 
         if (!group.hasFocus() || switched) group.setText(a.group);
         group.setEnabled(a.variant == null);
@@ -385,29 +375,45 @@ final class AnchorPanel extends JPanel {
         endVariant.setEnabled(repeats || a.endVariant != null);
         endLabel.setEnabled(endVariant.isEnabled());
         if (!repeats) {
-            depthNote.setText("Only used when " + (a.target.isEmpty() ? "the target" : a.target) + " repeats.");
+            depthNote.setText(a.target.isEmpty() ? L10n.t("anchor.depth.unusedNoTarget") : L10n.t("anchor.depth.unused", "name", a.target));
             depthNote.setForeground(Draw.MUTED);
         } else if (starts) {
-            depthNote.setText(a.depth == null ? "Required: this anchor starts a repetition." : "Number of " + a.target + " in the chain.");
+            depthNote.setText(a.depth == null ? L10n.t("anchor.depth.required") : L10n.t("anchor.depth.count", "name", a.target));
             depthNote.setForeground(a.depth == null ? Draw.WARNING : Draw.MUTED);
         } else {
-            depthNote.setText("Inside the cycle: continues the count from above.");
+            depthNote.setText(L10n.t("anchor.depth.inside"));
             depthNote.setForeground(Draw.MUTED);
         }
         namedDirs.get(a.dir).setSelected(true);
-        namedPos.setText("x " + a.x + ", y " + a.y);
+        namedPos.setText(L10n.t("anchor.position", "x", a.x, "y", a.y));
     }
 
-    private void fillVariantCombo(JComboBox<String> combo, String nullLabel, List<String> variants, String current) {
-        List<String> items = new ArrayList<>();
-        items.add(nullLabel);
-        items.addAll(variants);
-        String cur = variantToChoice(current, nullLabel);
-        if (!items.contains(cur)) {
-            cur = cur + " (missing)";
-            items.add(cur);
+    /**
+     * A dropdown entry: the variant value it stands for (null for random or none) and its label.
+     * Keeping the value next to the label means translated labels never need to be parsed back.
+     */
+    private record Choice(String value, String label) {
+        @Override
+        public String toString() {
+            return label;
         }
-        combo.setModel(new DefaultComboBoxModel<>(items.toArray(String[]::new)));
-        combo.setSelectedItem(cur);
+    }
+
+    private static String variantLabel(String v) {
+        return v.isEmpty() ? L10n.t("anchor.variant.unnamed") : v;
+    }
+
+    private void fillVariantCombo(JComboBox<Choice> combo, String nullLabel, List<String> variants, String current) {
+        List<Choice> items = new ArrayList<>();
+        items.add(new Choice(null, nullLabel));
+        for (String v : variants) items.add(new Choice(v, variantLabel(v)));
+        Choice selected = null;
+        for (Choice c : items) if (java.util.Objects.equals(c.value(), current)) selected = c;
+        if (selected == null) {
+            selected = new Choice(current, L10n.t("anchor.variant.missing", "name", variantLabel(current)));
+            items.add(selected);
+        }
+        combo.setModel(new DefaultComboBoxModel<>(items.toArray(Choice[]::new)));
+        combo.setSelectedItem(selected);
     }
 }

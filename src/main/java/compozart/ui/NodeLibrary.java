@@ -1,5 +1,7 @@
 package compozart.ui;
 
+import compozart.text.L10n;
+
 import compozart.model.Node;
 import compozart.model.Project;
 
@@ -47,22 +49,22 @@ final class NodeLibrary extends JPanel {
         this.actions = actions;
         this.keyHint = keyHint;
         actions.setFolderSource(this::currentFolder);
-        JLabel title = new JLabel("Node library");
+        JLabel title = new JLabel(L10n.t("library.title"));
         title.setFont(title.getFont().deriveFont(Font.BOLD));
         title.setBorder(BorderFactory.createEmptyBorder(6, 8, 4, 8));
 
         JToolBar bar = new JToolBar();
         bar.setFloatable(false);
-        JButton newButton = button("new", "New node, folder or imported image, in the selected folder", null, () -> { });
+        JButton newButton = button("new", L10n.t("library.tip.new"), null, () -> { });
         newButton.addActionListener(e -> newMenu().show(newButton, 0, newButton.getHeight()));
         bar.add(newButton);
-        bar.add(button("rename", "Rename the selected node or folder", "node.edit", this::renameSelected));
-        bar.add(button("duplicate", "Duplicate the node as a new variant", "node.duplicate", actions::duplicate));
-        bar.add(button("resize", "Resize the node", "node.resize", actions::resize));
-        bar.add(button("root", "Make the node the creature root", "node.root", () -> actions.setRoot(ed.node())));
-        bar.add(button("up", "Move up within its folder", null, () -> actions.move(-1)));
-        bar.add(button("down", "Move down within its folder", null, () -> actions.move(1)));
-        bar.add(button("delete", "Delete the node or folder", "node.delete", this::deleteSelected));
+        bar.add(button("rename", L10n.t("library.tip.rename"), "node.edit", this::renameSelected));
+        bar.add(button("duplicate", L10n.t("library.tip.duplicate"), "node.duplicate", actions::duplicate));
+        bar.add(button("resize", L10n.t("library.tip.resize"), "node.resize", actions::resize));
+        bar.add(button("root", L10n.t("library.tip.root"), "node.root", () -> actions.setRoot(ed.node())));
+        bar.add(button("up", L10n.t("library.tip.up"), null, () -> actions.move(-1)));
+        bar.add(button("down", L10n.t("library.tip.down"), null, () -> actions.move(1)));
+        bar.add(button("delete", L10n.t("library.tip.delete"), "node.delete", this::deleteSelected));
 
         JPanel north = new JPanel(new BorderLayout());
         north.add(title, BorderLayout.NORTH);
@@ -127,7 +129,7 @@ final class NodeLibrary extends JPanel {
             @Override
             public String getToolTipText(MouseEvent e) {
                 String k = actionId == null ? "" : keyHint.apply(actionId);
-                return k.isEmpty() ? tip : tip + " (" + k + ")";
+                return k.isEmpty() ? tip : L10n.t("tooltip.withKey", "text", tip, "key", k);
             }
         };
         ToolTipManager.sharedInstance().registerComponent(b);
@@ -169,9 +171,9 @@ final class NodeLibrary extends JPanel {
     private JPopupMenu newMenu() {
         String here = currentFolder();
         JPopupMenu m = new JPopupMenu();
-        m.add(item("Node" + in(here) + "\u2026", () -> actions.create(null)));
-        m.add(item("Folder" + in(here) + "\u2026", () -> newFolderIn(here)));
-        m.add(item("Import image" + in(here) + "\u2026", actions::importImages));
+        m.add(item(in(here, "library.new.node"), () -> actions.create(null)));
+        m.add(item(in(here, "library.new.folder"), () -> newFolderIn(here)));
+        m.add(item(in(here, "library.new.image"), actions::importImages));
         return m;
     }
 
@@ -221,42 +223,43 @@ final class NodeLibrary extends JPanel {
         Object row = rowOf(path);
         String here = row instanceof FolderRow f ? f.path() : row instanceof NodeRow r ? r.node().folder : "";
         JPopupMenu m = new JPopupMenu();
-        m.add(item("New node" + in(here) + "…", () -> actions.create(null)));
-        m.add(item("New folder" + in(here) + "…", () -> newFolderIn(here)));
-        m.add(item("Import image" + in(here) + "\u2026", actions::importImages));
+        m.add(item(in(here, "library.menu.newNode"), () -> actions.create(null)));
+        m.add(item(in(here, "library.menu.newFolder"), () -> newFolderIn(here)));
+        m.add(item(in(here, "library.new.image"), actions::importImages));
         if (row instanceof NodeRow r) {
             m.addSeparator();
-            m.add(item("Duplicate as new variant", actions::duplicate));
-            m.add(item("Rename\u2026", actions::edit));
-            m.add(item("Resize…", actions::resize));
-            m.add(item("Set as root", () -> actions.setRoot(r.node())));
+            m.add(item(L10n.t("action.node.duplicate"), actions::duplicate));
+            m.add(item(L10n.t("library.menu.rename"), actions::edit));
+            m.add(item(L10n.t("library.menu.resize"), actions::resize));
+            m.add(item(L10n.t("library.menu.setRoot"), () -> actions.setRoot(r.node())));
             m.add(moveMenu(null, r.node()));
             m.addSeparator();
-            m.add(item("Delete node", actions::delete));
+            m.add(item(L10n.t("action.node.delete"), actions::delete));
         } else if (row instanceof FolderRow f) {
             m.addSeparator();
-            m.add(item("Rename folder…", this::editSelected));
+            m.add(item(L10n.t("library.menu.renameFolder"), this::editSelected));
             m.add(moveMenu(f.path(), null));
             m.addSeparator();
-            m.add(item("Delete folder…", () -> actions.deleteFolder(f.path())));
+            m.add(item(L10n.t("library.menu.deleteFolder"), () -> actions.deleteFolder(f.path())));
         }
         m.show(tree, e.getX(), e.getY());
     }
 
-    private static String in(String folder) {
-        return folder.isEmpty() ? "" : " in " + Project.nameOf(folder);
+    /** A "New …" label, naming the folder it goes into when that is not the top level. */
+    private static String in(String folder, String key) {
+        return folder.isEmpty() ? L10n.t(key) : L10n.t(key + ".in", "path", Project.nameOf(folder));
     }
 
     /** "Move to" submenu for a folder or a node. */
     private JMenu moveMenu(String folder, Node node) {
-        JMenu menu = new JMenu("Move to");
+        JMenu menu = new JMenu(L10n.t("library.menu.moveTo"));
         List<String> targets = new ArrayList<>();
         targets.add("");
         targets.addAll(ed.project().folders());
         String current = folder != null ? Project.parentOf(folder) : node.folder;
         for (String t : targets) {
             boolean ok = !t.equals(current) && (folder == null || !Project.isInside(t, folder));
-            JMenuItem item = new JMenuItem(t.isEmpty() ? "(top level)" : t);
+            JMenuItem item = new JMenuItem(t.isEmpty() ? L10n.t("library.topLevel") : t);
             item.setEnabled(ok);
             item.addActionListener(e -> {
                 if (folder != null) moveFolder(folder, t);
@@ -478,9 +481,9 @@ final class NodeLibrary extends JPanel {
                 Node n = r.node();
                 StringBuilder sb = new StringBuilder("<html>").append(esc(n.name));
                 if (!n.variant.isEmpty()) sb.append(" [").append(esc(n.variant)).append("]");
-                sb.append("<br><font color='").append(muted).append("'>").append(n.size()).append("px");
-                if (n.ref().equals(p.root)) sb.append(" · root");
-                if (n.root == null && !n.ref().equals(p.root)) sb.append(" · no root anchor");
+                sb.append("<br><font color='").append(muted).append("'>").append(esc(L10n.t("library.size", "size", n.size())));
+                if (n.ref().equals(p.root)) sb.append(" \u00b7 ").append(esc(L10n.t("library.isRoot")));
+                if (n.root == null && !n.ref().equals(p.root)) sb.append(" \u00b7 ").append(esc(L10n.t("library.noRootAnchor")));
                 sb.append("</font></html>");
                 setText(sb.toString());
                 setIcon(Draw.nodeIcon(n, p.palette, THUMB));

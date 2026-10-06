@@ -1,6 +1,7 @@
 package compozart.ui;
 
 import compozart.io.Json;
+import compozart.text.L10n;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -45,6 +46,8 @@ final class Settings {
     int autosaveMinutes = 5;
     /** How many recent projects the home screen lists. */
     int recentProjects = 10;
+    /** A language code ("de"), or "auto" for the system language. */
+    String language = "auto";
 
     Settings() {
         this(AppHome.settingsDir().resolve(FILE_NAME));
@@ -78,7 +81,7 @@ final class Settings {
             try {
                 save(keys);
             } catch (IOException e) {
-                return "Could not write " + FILE_NAME + ": " + e.getMessage();
+                return L10n.t("settings.error.write", "file", FILE_NAME, "reason", e.getMessage());
             }
             return null;
         }
@@ -94,7 +97,7 @@ final class Settings {
             return null;
         }
         String problems = read(keys, f);
-        return problems != null ? problems : "Reloaded " + f;
+        return problems != null ? problems : L10n.t("settings.reloaded", "file", f);
     }
 
     private String read(KeyMap keys, Path f) {
@@ -109,6 +112,7 @@ final class Settings {
                 autosaveMinutes = (int) Math.max(0, Json.num(b, "autosaveMinutes", autosaveMinutes));
             }
             recentProjects = (int) Math.max(1, Json.num(m, "recentProjects", recentProjects));
+            language = Json.str(m, "language", language);
             if (keys == null) return null;
             Object kb = m.get("keybindings");
             if (kb == null) return null;
@@ -128,12 +132,12 @@ final class Settings {
                 try {
                     save(keys);
                 } catch (IOException e) {
-                    problems.add("could not upgrade the file: " + e.getMessage());
+                    problems.add(L10n.t("settings.error.upgrade", "reason", e.getMessage()));
                 }
             }
             return problems.isEmpty() ? null : f.getFileName() + ": " + String.join("; ", problems);
         } catch (IOException | RuntimeException e) {
-            return "Could not read " + f + ": " + e.getMessage();
+            return L10n.t("settings.error.read", "file", f, "reason", e.getMessage());
         }
     }
 
@@ -150,6 +154,7 @@ final class Settings {
         backups.put("autosaveMinutes", (long) autosaveMinutes);
         m.put("backups", backups);
         m.put("recentProjects", (long) recentProjects);
+        m.put("language", language);
         m.put("keybindings", keys.toJson());
         String text = Json.write(m);
         Path target = loadedFrom != null ? loadedFrom : primary;

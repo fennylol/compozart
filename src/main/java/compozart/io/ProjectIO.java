@@ -1,6 +1,7 @@
 package compozart.io;
 
 import compozart.model.*;
+import compozart.text.L10n;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -114,16 +115,16 @@ public final class ProjectIO {
     public static Project fromJson(String text) {
         Map<String, Object> m = Json.obj(Json.parse(text), "file");
         Object format = m.get("format");
-        if (!FORMAT.equals(format) && !LEGACY_FORMAT.equals(format)) throw new IllegalArgumentException("not a compozart file");
+        if (!FORMAT.equals(format) && !LEGACY_FORMAT.equals(format)) throw new IllegalArgumentException(L10n.t("file.error.notCompozart"));
         long version = Json.num(m, "version", 0);
         if (version < 1 || version > Project.FORMAT_VERSION) {
-            throw new IllegalArgumentException("unsupported file version " + version);
+            throw new IllegalArgumentException(L10n.t("file.error.version", "version", version));
         }
 
         Palette pal = new Palette();
         List<Object> entries = Json.arr(m.get("palette"), "palette");
-        if (entries.isEmpty()) throw new IllegalArgumentException("palette is empty");
-        if (entries.size() > Palette.MAX) throw new IllegalArgumentException("palette has more than 256 entries");
+        if (entries.isEmpty()) throw new IllegalArgumentException(L10n.t("file.error.paletteEmpty"));
+        if (entries.size() > Palette.MAX) throw new IllegalArgumentException(L10n.t("file.error.paletteTooBig", "max", Palette.MAX));
         for (int i = 1; i < entries.size(); i++) {
             Map<String, Object> e = Json.obj(entries.get(i), "palette entry");
             pal.add(new Palette.Swatch(parseColor(Json.str(e, "color", "#000000ff")), Json.str(e, "name", "")));
@@ -140,13 +141,13 @@ public final class ProjectIO {
         Object folders = m.get("folders");
         if (folders != null) {
             for (Object f : Json.arr(folders, "folders")) {
-                if (!(f instanceof String s)) throw new IllegalArgumentException("folders should be strings");
+                if (!(f instanceof String s)) throw new IllegalArgumentException(L10n.t("file.error.folders"));
                 p.addFolder(s);
             }
         }
         Set<NodeRef> seen = new HashSet<>();
         for (Node n : p.nodes) {
-            if (!seen.add(n.ref())) throw new IllegalArgumentException("duplicate node " + n.ref());
+            if (!seen.add(n.ref())) throw new IllegalArgumentException(L10n.t("file.error.duplicateNode", "ref", n.ref()));
         }
         return p;
     }
@@ -154,7 +155,7 @@ public final class ProjectIO {
     private static Node readNode(Map<String, Object> m, int paletteSize) {
         String name = Json.str(m, "name", "");
         int size = (int) Json.num(m, "size", Node.DEFAULT_SIZE);
-        if (size < 1 || size > Node.MAX_SIZE) throw new IllegalArgumentException("node " + name + " has bad size " + size);
+        if (size < 1 || size > Node.MAX_SIZE) throw new IllegalArgumentException(L10n.t("file.error.nodeSize", "name", name, "size", size));
         Node n = new Node(name, Json.str(m, "variant", ""), size);
         n.folder = Project.normalizeFolder(Json.str(m, "folder", ""));
         Object root = m.get("root");
@@ -179,14 +180,14 @@ public final class ProjectIO {
             }
         }
         List<Object> rows = Json.arr(m.get("pixels"), "pixels of " + name);
-        if (rows.size() != size) throw new IllegalArgumentException("node " + name + " has " + rows.size() + " pixel rows, expected " + size);
+        if (rows.size() != size) throw new IllegalArgumentException(L10n.t("file.error.rowCount", "name", name, "rows", rows.size(), "size", size));
         for (int y = 0; y < size; y++) {
             if (!(rows.get(y) instanceof String row) || row.length() != size * 2) {
-                throw new IllegalArgumentException("node " + name + " pixel row " + y + " has the wrong length");
+                throw new IllegalArgumentException(L10n.t("file.error.rowLength", "name", name, "row", y));
             }
             for (int x = 0; x < size; x++) {
                 int v = Integer.parseInt(row.substring(x * 2, x * 2 + 2), 16);
-                if (v >= paletteSize) throw new IllegalArgumentException("node " + name + " uses palette index " + v + " beyond the palette");
+                if (v >= paletteSize) throw new IllegalArgumentException(L10n.t("file.error.colorIndex", "name", name, "index", v));
                 n.set(x, y, v);
             }
         }
@@ -195,7 +196,7 @@ public final class ProjectIO {
 
     private static int coord(Map<String, Object> m, String key, int size) {
         long v = Json.num(m, key, 0);
-        if (v < 0 || v >= size) throw new IllegalArgumentException("anchor " + key + " out of range: " + v);
+        if (v < 0 || v >= size) throw new IllegalArgumentException(L10n.t("file.error.anchorRange", "axis", key, "value", v));
         return (int) v;
     }
 
@@ -207,7 +208,7 @@ public final class ProjectIO {
     /** Parses {@code #rrggbb} or {@code #rrggbbaa} into ARGB. */
     public static int parseColor(String s) {
         String h = s.startsWith("#") ? s.substring(1) : s;
-        if (!h.matches("[0-9a-fA-F]{6}([0-9a-fA-F]{2})?")) throw new IllegalArgumentException("bad color " + s);
+        if (!h.matches("[0-9a-fA-F]{6}([0-9a-fA-F]{2})?")) throw new IllegalArgumentException(L10n.t("file.error.color", "value", s));
         int rgb = Integer.parseInt(h.substring(0, 6), 16);
         int a = h.length() == 8 ? Integer.parseInt(h.substring(6), 16) : 255;
         return (a << 24) | rgb;

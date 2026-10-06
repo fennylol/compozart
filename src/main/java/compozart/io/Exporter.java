@@ -2,6 +2,7 @@ package compozart.io;
 
 import compozart.compose.Composition;
 import compozart.model.Palette;
+import compozart.text.L10n;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -17,17 +18,24 @@ import java.util.zip.ZipOutputStream;
  */
 public final class Exporter {
     public enum Format {
-        FLAT_PNG("Flat PNG", ".png"),
-        LAYER_ZIP("Layer zip", ".zip"),
-        ASEPRITE("Aseprite", ".aseprite"),
-        GODOT_2D("Godot 2D scene", ".tscn"),
-        GODOT_3D("Godot 3D scene", ".tscn");
+        FLAT_PNG("export.format.flatPng", ".png"),
+        LAYER_ZIP("export.format.layerZip", ".zip"),
+        ASEPRITE("export.format.aseprite", ".aseprite"),
+        GODOT_2D("export.format.godot2d", ".tscn"),
+        GODOT_3D("export.format.godot3d", ".tscn");
 
-        public final String label, extension;
+        /** The key of the format's name in the language file. */
+        public final String key;
+        public final String extension;
 
-        Format(String label, String extension) {
-            this.label = label;
+        Format(String key, String extension) {
+            this.key = key;
             this.extension = extension;
+        }
+
+        /** The format's name in the current language. */
+        public String label() {
+            return L10n.t(key);
         }
 
         public boolean scalable() {
@@ -52,7 +60,7 @@ public final class Exporter {
     }
 
     public static byte[] export(Format format, Composition c, Palette palette, int padding, int scale) {
-        if (c.isEmpty()) throw new IllegalStateException("There is nothing to export: the creature has no pixels.");
+        if (c.isEmpty()) throw new IllegalStateException(L10n.t("export.error.empty"));
         if (padding < 0) throw new IllegalArgumentException("padding must not be negative");
         if (scale < 1) throw new IllegalArgumentException("scale must be at least 1");
         return switch (format) {
@@ -74,7 +82,7 @@ public final class Exporter {
     }
 
     public static String layerName(int shiftedLayer) {
-        return "layer " + shiftedLayer;
+        return L10n.t("export.layerName", "number", shiftedLayer);
     }
 
     private static byte[] layerZip(Composition c, Palette palette, int padding, int scale) {

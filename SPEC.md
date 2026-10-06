@@ -327,6 +327,7 @@ Every action below can be rebound in Edit > Keyboard shortcuts, or by editing `s
 - Unknown actions or keys are skipped and reported in the status bar.
 - The file has a version number. When a new version changes a default key, an older file that still holds the old default picks up the new one; keys the user changed stay as they are. When an action is renamed (the pencil became `tool.draw` in version 3), its saved keys move to the new name. The file is then rewritten at the new version.
 - `recentProjects` sets how many recent projects the home screen lists (default 10).
+- `language` picks the interface language: a code such as `de`, or `auto` (default). See Localization.
 - A `backups` section sets how many backups to keep per project (`keep`, default 20) and the autosave interval (`autosaveMinutes`, default 5; 0 turns it off).
 - If the settings folder is not writable, settings go to `~/.config/compozart/` on Linux or `%APPDATA%\compozart\` on Windows.
 
@@ -347,6 +348,23 @@ Every action below can be rebound in Edit > Keyboard shortcuts, or by editing `s
 - An icon that is missing or malformed in the file uses the built-in one, and the problem is reported.
 
 Both files are written from the built-in defaults when missing, and reread when the window regains focus.
+
+## Localization
+
+Every piece of text the app shows comes from a language file, so the app can be translated without touching the code.
+
+- English is built in. Translations are JSON files in `settings/languages/`, named by language code: `de.json`, `fr.json`.
+- Translations can also ship inside the jar, listed in `languages/index.txt` next to `en.json`. German (`de`) ships as a complete example. A file in `settings/languages/` with the same code adjusts a shipped translation; anything it leaves out comes from the shipped one, then from English.
+- Each launch writes `settings/languages/en.template.json`, the complete English file, as the starting point for a translation. It is rewritten every time, so translations go in their own files. An `en.json` in the folder adjusts the built-in English wording.
+- A file has a display name (`language`), a `code`, a `terms` table and a `strings` table. Strings are flat dotted keys, such as `menu.file` or `node.rename.retarget`.
+- `{name}` is a value the app fills in, such as a file name or a count. `{term}` or `{term:form}` inserts a word from `terms`; a capital first letter (`{Anchor}`) capitalizes the word. Terms let a translator name a concept once ("anchor", "node", "layer") and reuse it everywhere, and let English wording change in one place.
+- A term lists the forms its language needs: `one` and `other` in English, and any others a translator adds, such as `"dative.other"`. A missing form falls back to `other`, then `one`. A translator who cannot make a sentence work with a term can write the word directly.
+- Plural strings give one text per plural category (`zero`, `one`, `two`, `few`, `many`, `other`) and pick the right one for the count. The categories follow the CLDR rules for English-like languages, French and Portuguese, Russian and Ukrainian, Polish, Czech and Slovak, and languages without plurals such as Japanese and Chinese.
+- Anything a translation leaves out falls back to English. A key missing everywhere shows as `[key]`.
+- Loading a translation reports any string that drops a value placeholder its English text has, such as `{file}`.
+- `settings.json` holds the choice as `"language"`: a code, or `auto` for the system language when a file for it exists. View > Language lists English, the files in the folder by display name, and a pseudo language that wraps every string in brackets to show text that skipped localization. Choosing a language reopens the window in it, keeping the project and any unsaved changes.
+- The language also sets Java's locale, so Swing's own buttons (OK, Cancel) follow it.
+- Not translated: user data (node, variant, folder and color names), file contents such as exported Godot scenes, the documentation inside the settings files, and messages for internal errors.
 
 ## Files
 
@@ -437,7 +455,7 @@ compozart/
   app/
     compozart.jar
     runtime/           trimmed Java runtime from jlink
-  settings/            settings.json, themes.json, icons.json, recent.json
+  settings/            settings.json, themes.json, icons.json, recent.json, languages/
   compositions/        projects, starting with the demo
     backups/           copies made on save, and autosaves
 ```
@@ -457,7 +475,7 @@ SPEC.md
 examples/            demo creature
 lib/                 FlatLaf jar
 src/main/java/       app source
-src/main/resources/  built-in themes.json and icons.json
+src/main/resources/  built-in themes.json, icons.json and languages/en.json
 src/test/java/       tests
 build/               compiler output and the jar (generated)
 dist/                app folders and archives (generated)

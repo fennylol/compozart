@@ -12,7 +12,7 @@ public class PixelIconTest {
     }
 
     public void testHelpMentionsBoundKeys() {
-        String h = ToolHelp.html(Tool.DRAW, id -> id.equals("brush.smaller") ? "Shift+[" : "", 200);
+        String h = ToolHelp.html(Tool.DRAW, id -> id.equals("brush.smaller") ? "Shift+[" : id.equals("brush.larger") ? "Shift+]" : "", 200);
         yes(h.contains("Shift+["), "uses the bound key");
         eq("Draw (D)", ToolHelp.title(Tool.DRAW, id -> id.equals("tool.draw") ? "D" : ""));
         eq("Fill", ToolHelp.title(Tool.FILL, id -> ""));

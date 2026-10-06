@@ -1,6 +1,7 @@
 package compozart.ui;
 
 import compozart.model.*;
+import compozart.text.L10n;
 
 import javax.swing.*;
 import java.awt.*;
@@ -64,7 +65,7 @@ final class AnchorMenus {
         JPopupMenu m = new JPopupMenu();
         Node n = ed.node();
         if (n == null) return m;
-        String[] names = {"Point up", "Point right", "Point down", "Point left"};
+        String[] names = {L10n.t("anchor.point.up"), L10n.t("anchor.point.right"), L10n.t("anchor.point.down"), L10n.t("anchor.point.left")};
         Dir current = dir();
         for (Dir d : Dir.values()) {
             JRadioButtonMenuItem item = new JRadioButtonMenuItem(names[d.ordinal()], d == current);
@@ -74,17 +75,17 @@ final class AnchorMenus {
         m.addSeparator();
         if (which >= 0) {
             m.add(attachedMenu(n.anchors.get(which)));
-            JMenuItem up = new JMenuItem("Draw earlier");
+            JMenuItem up = new JMenuItem(L10n.t("anchor.drawEarlier"));
             up.setEnabled(which > 0);
             up.addActionListener(e -> reorder(-1));
-            JMenuItem down = new JMenuItem("Draw later");
+            JMenuItem down = new JMenuItem(L10n.t("anchor.drawLater"));
             down.setEnabled(which < n.anchors.size() - 1);
             down.addActionListener(e -> reorder(1));
             m.add(up);
             m.add(down);
             m.addSeparator();
         }
-        JMenuItem del = new JMenuItem("Delete anchor");
+        JMenuItem del = new JMenuItem(L10n.t("anchor.delete"));
         del.addActionListener(e -> delete());
         m.add(del);
         return m;
@@ -92,7 +93,7 @@ final class AnchorMenus {
 
     /** A submenu listing every node that can attach at the anchor, plus a way to create one. */
     JMenu attachedMenu(NamedAnchor a) {
-        JMenu menu = new JMenu("Open attached node");
+        JMenu menu = new JMenu(L10n.t("anchor.openAttached"));
         fillAttached(menu.getPopupMenu(), a);
         return menu;
     }
@@ -100,16 +101,16 @@ final class AnchorMenus {
     private void fillAttached(JPopupMenu menu, NamedAnchor a) {
         List<Node> nodes = ed.project().named(a.target);
         for (Node node : nodes) {
-            String label = node.variant.isEmpty() ? node.name + " (unnamed variant)" : node.name + " [" + node.variant + "]";
-            if (a.variant != null && a.variant.equals(node.variant)) label += "  ← pinned";
-            if (node.root == null) label += "  (no root anchor)";
+            String label = node.variant.isEmpty() ? node.name + " " + L10n.t("anchor.variant.unnamed") : node.name + " [" + node.variant + "]";
+            if (a.variant != null && a.variant.equals(node.variant)) label += "  \u2190 " + L10n.t("anchor.pinned");
+            if (node.root == null) label += "  (" + L10n.t("library.noRootAnchor") + ")";
             JMenuItem item = new JMenuItem(label);
             item.addActionListener(e -> ed.selectNode(node));
             menu.add(item);
         }
         if (!nodes.isEmpty()) menu.addSeparator();
-        JMenuItem create = new JMenuItem(a.target.isEmpty() ? "Set a target name to create a node"
-                : nodes.isEmpty() ? "Create node “" + a.target + "”" : "Create another “" + a.target + "” variant");
+        JMenuItem create = new JMenuItem(a.target.isEmpty() ? L10n.t("anchor.createNeedsTarget")
+                : nodes.isEmpty() ? L10n.t("anchor.createNode", "name", a.target) : L10n.t("anchor.createVariant", "name", a.target));
         create.setEnabled(!a.target.isEmpty());
         create.addActionListener(e -> createNodeNamed.accept(a.target));
         menu.add(create);

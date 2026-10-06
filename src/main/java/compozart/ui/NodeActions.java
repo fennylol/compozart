@@ -1,6 +1,7 @@
 package compozart.ui;
 
 import compozart.model.*;
+import compozart.text.L10n;
 
 import javax.swing.*;
 import java.awt.*;
@@ -30,24 +31,24 @@ final class NodeActions {
     }
 
     private String validate(String name, String variant, Node except) {
-        if (name.isEmpty()) return "The name cannot be empty.";
+        if (name.isEmpty()) return L10n.t("node.error.emptyName");
         Node other = p().find(name, variant);
-        if (other != null && other != except) return "A node " + new NodeRef(name, variant) + " already exists.";
+        if (other != null && other != except) return L10n.t("node.error.exists", "ref", new NodeRef(name, variant));
         return null;
     }
 
     /** Creates a node, optionally with a preset name (from an anchor's target). */
     void create(String presetName) {
-        String name = presetName != null ? presetName : p().uniqueName("part", "");
-        String variant = presetName != null && !p().named(presetName).isEmpty() ? p().uniqueVariant(presetName, "variant") : "";
+        String name = presetName != null ? presetName : p().uniqueName(L10n.t("node.defaultName"), "");
+        String variant = presetName != null && !p().named(presetName).isEmpty() ? p().uniqueVariant(presetName, L10n.t("node.defaultVariant")) : "";
         JTextField nameF = new JTextField(name, 16);
         JTextField varF = new JTextField(variant, 16);
         JSpinner size = new JSpinner(new SpinnerNumberModel(Node.DEFAULT_SIZE, 1, Node.MAX_SIZE, 1));
-        JCheckBox root = new JCheckBox("Add a root anchor (center, pointing down)", true);
-        JPanel form = form(new String[]{"Name", "Variant", "Size"}, nameF, varF, size);
+        JCheckBox root = new JCheckBox(L10n.t("node.addRootAnchor"), true);
+        JPanel form = form(new String[]{L10n.t("node.label.name"), L10n.t("node.label.variant"), L10n.t("node.label.size")}, nameF, varF, size);
         form.add(root, gbc(3, 0, 2));
         while (true) {
-            if (!ask("New node", form, nameF)) return;
+            if (!ask(L10n.t("node.new.title"), form, nameF)) return;
             String n = nameF.getText().trim(), v = varF.getText().trim();
             String err = validate(n, v, null);
             if (err != null) {
@@ -73,7 +74,7 @@ final class NodeActions {
         Node n = ed.node();
         if (n == null) return;
         Node c = n.copy();
-        c.variant = p().uniqueVariant(n.name, n.variant.isEmpty() ? "copy" : n.variant + " copy");
+        c.variant = p().uniqueVariant(n.name, n.variant.isEmpty() ? L10n.t("node.copyVariant") : L10n.t("node.copyOf", "name", n.variant));
         int at = ed.nodeIndex() + 1;
         ed.edit(null, () -> p().nodes.add(at, c));
         ed.selectNode(c);
@@ -84,9 +85,9 @@ final class NodeActions {
         if (n == null) return;
         JTextField nameF = new JTextField(n.name, 16);
         JTextField varF = new JTextField(n.variant, 16);
-        JPanel form = form(new String[]{"Name", "Variant"}, nameF, varF);
+        JPanel form = form(new String[]{L10n.t("node.label.name"), L10n.t("node.label.variant")}, nameF, varF);
         while (true) {
-            if (!ask("Rename node", form, nameF)) return;
+            if (!ask(L10n.t("node.rename.title"), form, nameF)) return;
             String name = nameF.getText().trim(), variant = varF.getText().trim();
             String err = validate(name, variant, n);
             if (err != null) {
@@ -102,8 +103,8 @@ final class NodeActions {
                 boolean targeted = p().nodes.stream().anyMatch(x -> x.anchors.stream().anyMatch(a -> a.target.equals(oldName)));
                 if (targeted && !othersKeepName) {
                     int r = JOptionPane.showConfirmDialog(parent,
-                            "Anchors target “" + oldName + "”. Point them at “" + name + "” too?",
-                            "Rename", JOptionPane.YES_NO_CANCEL_OPTION);
+                            L10n.t("node.rename.retarget", "old", oldName, "new", name),
+                            L10n.t("node.rename.short"), JOptionPane.YES_NO_CANCEL_OPTION);
                     if (r == JOptionPane.CANCEL_OPTION || r == JOptionPane.CLOSED_OPTION) return;
                     retarget = r == JOptionPane.YES_OPTION;
                 }
@@ -148,8 +149,8 @@ final class NodeActions {
         fix[4].setSelected(true);
         JPanel gridWrap = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         gridWrap.add(grid);
-        JPanel form = form(new String[]{"Size", "Keep fixed"}, size, gridWrap);
-        if (!ask("Resize " + n.ref(), form, size)) return;
+        JPanel form = form(new String[]{L10n.t("node.label.size"), L10n.t("node.resize.keepFixed")}, size, gridWrap);
+        if (!ask(L10n.t("node.resize.title", "ref", n.ref()), form, size)) return;
         int s = (Integer) size.getValue();
         int k = 0;
         for (int i = 0; i < 9; i++) if (fix[i].isSelected()) k = i;
@@ -157,8 +158,8 @@ final class NodeActions {
         if (s == n.size()) return;
         int lost = n.anchorsLostByResize(s, fx, fy);
         if (lost > 0) {
-            int r = JOptionPane.showConfirmDialog(parent, lost + (lost == 1 ? " anchor falls" : " anchors fall")
-                    + " outside the new size and will be removed. Resize anyway?", "Resize", JOptionPane.OK_CANCEL_OPTION);
+            int r = JOptionPane.showConfirmDialog(parent, L10n.plural("node.resize.lost", lost),
+                    L10n.t("node.resize.short"), JOptionPane.OK_CANCEL_OPTION);
             if (r != JOptionPane.OK_OPTION) return;
         }
         ed.edit(null, () -> n.resize(s, fx, fy));
@@ -167,7 +168,7 @@ final class NodeActions {
     void delete() {
         Node n = ed.node();
         if (n == null) return;
-        int r = JOptionPane.showConfirmDialog(parent, "Delete " + n.ref() + "?", "Delete node", JOptionPane.OK_CANCEL_OPTION);
+        int r = JOptionPane.showConfirmDialog(parent, L10n.t("node.delete.text", "ref", n.ref()), L10n.t("node.delete.title"), JOptionPane.OK_CANCEL_OPTION);
         if (r != JOptionPane.OK_OPTION) return;
         int i = ed.nodeIndex();
         ed.edit(null, () -> {
@@ -200,7 +201,7 @@ final class NodeActions {
     /** Asks for one or more images and adds each as a node in the current folder. */
     void importImages() {
         Window w = SwingUtilities.getWindowAncestor(parent);
-        FileDialog fd = new FileDialog(w instanceof Frame f ? f : null, "Import image as node", FileDialog.LOAD);
+        FileDialog fd = new FileDialog(w instanceof Frame f ? f : null, L10n.t("action.node.import"), FileDialog.LOAD);
         fd.setMultipleMode(true);
         if (importDir != null) fd.setDirectory(importDir.toString());
         Set<String> suffixes = new HashSet<>();
@@ -221,21 +222,21 @@ final class NodeActions {
         for (java.io.File f : files) {
             try {
                 java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(f);
-                if (img == null) problems.append(f.getName()).append(": not a readable image\n");
+                if (img == null) problems.append(L10n.t("import.skip.unreadable", "file", f.getName())).append("\n");
                 else if (Math.max(img.getWidth(), img.getHeight()) > Node.MAX_SIZE) {
-                    problems.append(f.getName()).append(": ").append(img.getWidth()).append("\u00d7").append(img.getHeight())
-                            .append(" is larger than ").append(Node.MAX_SIZE).append("\u00d7").append(Node.MAX_SIZE).append("\n");
+                    problems.append(L10n.t("import.skip.tooLarge", "file", f.getName(), "width", img.getWidth(),
+                            "height", img.getHeight(), "max", Node.MAX_SIZE)).append("\n");
                 } else {
                     ok.add(f);
                     images.add(img);
                 }
             } catch (java.io.IOException e) {
-                problems.append(f.getName()).append(": ").append(e.getMessage()).append("\n");
+                problems.append(L10n.t("import.skip.error", "file", f.getName(), "reason", e.getMessage())).append("\n");
             }
         }
         if (!problems.isEmpty()) {
-            JOptionPane.showMessageDialog(parent, (ok.isEmpty() ? "" : "These files will be skipped:\n") + problems,
-                    "Import image", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(parent, (ok.isEmpty() ? "" : L10n.t("import.skipped") + "\n") + problems,
+                    L10n.t("import.title"), JOptionPane.WARNING_MESSAGE);
         }
         if (ok.isEmpty()) return;
         importDialog(ok, images);
@@ -245,41 +246,40 @@ final class NodeActions {
         boolean single = files.size() == 1;
         String base = baseName(files.get(0).getName());
         JTextField nameF = new JTextField(base, 16);
-        JTextField varF = new JTextField(p().find(base, "") == null ? "" : p().uniqueVariant(base, "import"), 16);
+        JTextField varF = new JTextField(p().find(base, "") == null ? "" : p().uniqueVariant(base, L10n.t("node.importVariant")), 16);
 
         StringBuilder stats = new StringBuilder("<html>");
         int fresh = 0;
         for (int i = 0; i < files.size() && i < 12; i++) {
             compozart.io.ImageImport.Analysis a = compozart.io.ImageImport.analyze(images.get(i), p().palette);
             fresh += a.fresh();
-            stats.append(escape(files.get(i).getName())).append(" \u00b7 ").append(a.width()).append("\u00d7").append(a.height())
-                    .append(" \u00b7 ").append(a.colors()).append(a.colors() == 1 ? " color" : " colors")
-                    .append(", ").append(a.inPalette()).append(" already in the palette<br>");
+            stats.append(escape(L10n.t("import.stats.file", "file", files.get(i).getName(), "width", a.width(), "height", a.height(),
+                    "colors", L10n.plural("import.stats.colors", a.colors()), "known", a.inPalette()))).append("<br>");
         }
-        if (files.size() > 12) stats.append("and ").append(files.size() - 12).append(" more<br>");
+        if (files.size() > 12) stats.append(escape(L10n.t("import.stats.more", "count", files.size() - 12))).append("<br>");
         int room = Palette.MAX - p().palette.size();
-        stats.append("The palette has room for ").append(room).append(room == 1 ? " more color." : " more colors.");
-        if (fresh > room) stats.append("<br>Colors that do not fit use the nearest palette color.");
+        stats.append(escape(L10n.plural("import.stats.room", room)));
+        if (fresh > room) stats.append("<br>").append(escape(L10n.t("import.stats.overflow")));
         stats.append("</html>");
 
-        JRadioButton add = new JRadioButton("Add new colors to the palette", true);
-        add.setToolTipText("Keeps the image's colors exactly while there is room in the palette");
-        JRadioButton nearest = new JRadioButton("Match the existing palette");
-        nearest.setToolTipText("Leaves the palette alone; every pixel uses the closest palette color");
+        JRadioButton add = new JRadioButton(L10n.t("import.mode.add"), true);
+        add.setToolTipText(L10n.t("import.mode.add.tip"));
+        JRadioButton nearest = new JRadioButton(L10n.t("import.mode.nearest"));
+        nearest.setToolTipText(L10n.t("import.mode.nearest.tip"));
         ButtonGroup bg = new ButtonGroup();
         bg.add(add);
         bg.add(nearest);
-        JCheckBox root = new JCheckBox("Add a root anchor (center, pointing down)", true);
+        JCheckBox root = new JCheckBox(L10n.t("node.addRootAnchor"), true);
 
         JPanel form = new JPanel(new GridBagLayout());
         int row = 0;
         if (single) {
-            form.add(new JLabel("Name"), gbc(row, 0, 1));
+            form.add(new JLabel(L10n.t("node.label.name")), gbc(row, 0, 1));
             form.add(nameF, gbc(row++, 1, 1));
-            form.add(new JLabel("Variant"), gbc(row, 0, 1));
+            form.add(new JLabel(L10n.t("node.label.variant")), gbc(row, 0, 1));
             form.add(varF, gbc(row++, 1, 1));
         } else {
-            form.add(new JLabel(files.size() + " images. Each becomes a node named after its file."), gbc(row++, 0, 2));
+            form.add(new JLabel(L10n.t("import.many", "count", files.size())), gbc(row++, 0, 2));
         }
         JLabel statsLabel = new JLabel(stats.toString());
         statsLabel.setForeground(Draw.MUTED);
@@ -289,7 +289,7 @@ final class NodeActions {
         form.add(root, gbc(row, 0, 2));
 
         while (true) {
-            if (!ask("Import image", form, single ? nameF : add)) return;
+            if (!ask(L10n.t("import.title"), form, single ? nameF : add)) return;
             if (single) {
                 String err = validate(nameF.getText().trim(), varF.getText().trim(), null);
                 if (err != null) {
@@ -309,7 +309,7 @@ final class NodeActions {
             int k = at;
             for (int i = 0; i < files.size(); i++) {
                 String name = single ? nameF.getText().trim() : baseName(files.get(i).getName());
-                String variant = single ? varF.getText().trim() : p().find(name, "") == null ? "" : p().uniqueVariant(name, "import");
+                String variant = single ? varF.getText().trim() : p().find(name, "") == null ? "" : p().uniqueVariant(name, L10n.t("node.importVariant"));
                 compozart.io.ImageImport.Result r = compozart.io.ImageImport.apply(p(), images.get(i), mode, name, variant);
                 Node n = r.node();
                 n.folder = folder;
@@ -322,10 +322,9 @@ final class NodeActions {
         });
         ed.selectNode(created.get(created.size() - 1));
         if (approximated[0] > 0) {
-            JOptionPane.showMessageDialog(parent, approximated[0] + (approximated[0] == 1 ? " pixel uses" : " pixels use")
-                    + " the nearest palette color, because its exact color "
-                    + (mode == compozart.io.ImageImport.Mode.NEAREST ? "is not in the palette." : "did not fit."),
-                    "Import image", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(parent, L10n.plural(mode == compozart.io.ImageImport.Mode.NEAREST
+                            ? "import.approximated.nearest" : "import.approximated.full", approximated[0]),
+                    L10n.t("import.title"), JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
@@ -346,22 +345,22 @@ final class NodeActions {
     String newFolder(String parent) {
         while (true) {
             String name = JOptionPane.showInputDialog(this.parent,
-                    parent.isEmpty() ? "New folder name:" : "New folder in " + parent + ":", "New folder",
+                    parent.isEmpty() ? L10n.t("folder.new.prompt") : L10n.t("folder.new.promptIn", "path", parent), L10n.t("folder.new.title"),
                     JOptionPane.PLAIN_MESSAGE);
             if (name == null) return null;
             String path;
             try {
                 path = Project.join(parent, Project.normalizeFolder(name));
             } catch (IllegalArgumentException e) {
-                error("Folder names cannot be empty.");
+                error(L10n.t("folder.error.empty"));
                 continue;
             }
             if (path.isEmpty()) {
-                error("Folder names cannot be empty.");
+                error(L10n.t("folder.error.empty"));
                 continue;
             }
             if (p().hasFolder(path)) {
-                error("The folder " + path + " already exists.");
+                error(L10n.t("folder.error.exists", "path", path));
                 continue;
             }
             ed.edit(null, () -> p().addFolder(path));
@@ -372,18 +371,18 @@ final class NodeActions {
     /** Renames a folder in place. Returns the new path, or null. */
     String renameFolder(String path) {
         while (true) {
-            String name = (String) JOptionPane.showInputDialog(this.parent, "Rename folder " + path + ":", "Rename folder",
+            String name = (String) JOptionPane.showInputDialog(this.parent, L10n.t("folder.rename.prompt", "path", path), L10n.t("folder.rename.title"),
                     JOptionPane.PLAIN_MESSAGE, null, null, Project.nameOf(path));
             if (name == null) return null;
             String trimmed = name.trim();
             if (trimmed.isEmpty() || trimmed.contains("/")) {
-                error("A folder name cannot be empty or contain \"/\".");
+                error(L10n.t("folder.error.slash"));
                 continue;
             }
             String target = Project.join(Project.parentOf(path), trimmed);
             if (target.equals(path)) return path;
             if (p().hasFolder(target)) {
-                error("The folder " + target + " already exists.");
+                error(L10n.t("folder.error.exists", "path", target));
                 continue;
             }
             ed.edit(null, () -> p().moveFolder(path, target));
@@ -394,11 +393,10 @@ final class NodeActions {
     /** Deletes a folder after asking. Its contents move up one level. */
     void deleteFolder(String path) {
         long count = p().nodes.stream().filter(n -> Project.isInside(n.folder, path)).count();
-        String where = Project.parentOf(path).isEmpty() ? "the top level" : Project.parentOf(path);
-        String msg = count == 0 && p().subfolders(path).isEmpty() ? "Delete the empty folder " + path + "?"
-                : "Delete the folder " + path + "? Its contents (" + count + (count == 1 ? " node" : " nodes")
-                + ") move up to " + where + ".";
-        int r = JOptionPane.showConfirmDialog(parent, msg, "Delete folder", JOptionPane.OK_CANCEL_OPTION);
+        String where = Project.parentOf(path).isEmpty() ? L10n.t("folder.topLevel") : Project.parentOf(path);
+        String msg = count == 0 && p().subfolders(path).isEmpty() ? L10n.t("folder.delete.empty", "path", path)
+                : L10n.plural("folder.delete.contents", count, "path", path, "where", where);
+        int r = JOptionPane.showConfirmDialog(parent, msg, L10n.t("folder.delete.title"), JOptionPane.OK_CANCEL_OPTION);
         if (r == JOptionPane.OK_OPTION) ed.edit(null, () -> p().deleteFolder(path));
     }
 
@@ -442,7 +440,7 @@ final class NodeActions {
     }
 
     private void error(String msg) {
-        JOptionPane.showMessageDialog(parent, msg, "Node", JOptionPane.WARNING_MESSAGE);
+        JOptionPane.showMessageDialog(parent, msg, L10n.t("menu.node"), JOptionPane.WARNING_MESSAGE);
     }
 
     static JPanel form(String[] labels, JComponent... fields) {

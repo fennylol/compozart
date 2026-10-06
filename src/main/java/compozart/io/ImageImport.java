@@ -4,6 +4,7 @@ import compozart.color.OkLab;
 import compozart.model.Node;
 import compozart.model.Palette;
 import compozart.model.Project;
+import compozart.text.L10n;
 
 import java.awt.image.BufferedImage;
 import java.util.*;
@@ -63,8 +64,7 @@ public final class ImageImport {
         int w = img.getWidth(), h = img.getHeight();
         int size = Math.max(w, h);
         if (size > Node.MAX_SIZE) {
-            throw new IllegalArgumentException("The image is " + w + "×" + h + "; nodes can be at most "
-                    + Node.MAX_SIZE + "×" + Node.MAX_SIZE + ".");
+            throw new IllegalArgumentException(L10n.t("import.error.tooLarge", "width", w, "height", h, "max", Node.MAX_SIZE));
         }
         Palette pal = project.palette;
         Map<Integer, Integer> counts = colorCounts(img);

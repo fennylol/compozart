@@ -1,6 +1,7 @@
 package compozart.compose;
 
 import compozart.model.*;
+import compozart.text.L10n;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,7 +17,7 @@ public final class ParentGhost {
         }
 
         public String label() {
-            return parent.ref() + " → " + anchor().target + " #" + (anchorIndex + 1);
+            return L10n.t("ghost.label", "parent", parent.ref(), "name", anchor().target, "number", anchorIndex + 1);
         }
     }
 

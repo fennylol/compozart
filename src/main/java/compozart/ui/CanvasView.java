@@ -1,5 +1,7 @@
 package compozart.ui;
 
+import compozart.text.L10n;
+
 import compozart.compose.ParentGhost;
 import compozart.model.*;
 
@@ -201,16 +203,17 @@ final class CanvasView extends JComponent {
         Node n = ed.node();
         StringBuilder sb = new StringBuilder();
         if (n != null) {
-            sb.append(n.ref()).append(" · ").append(n.size()).append("×").append(n.size());
+            sb.append(L10n.t("status.node", "ref", n.ref(), "size", n.size()));
             if (hover != null && n.contains(hover.x, hover.y)) {
                 int v = n.get(hover.x, hover.y);
                 Palette.Swatch s = ed.project().palette.get(v);
-                sb.append(" · (").append(hover.x).append(", ").append(hover.y).append(") index ").append(v);
-                if (!s.name().isEmpty()) sb.append(" ").append(s.name());
+                sb.append(" · ").append(L10n.t(s.name().isEmpty() ? "status.pixel" : "status.pixel.named",
+                        "x", hover.x, "y", hover.y, "index", v, "name", s.name()));
             }
+            sb.append(" · ");
         }
-        if (ed.tool().brushed()) sb.append(" · brush ").append(ed.brushSize());
-        sb.append(" · zoom ").append(zoom).append("×");
+        if (ed.tool().brushed()) sb.append(L10n.t("status.brush", "size", ed.brushSize())).append(" · ");
+        sb.append(L10n.t("status.zoom", "zoom", zoom));
         status.accept(sb.toString());
     }
 
@@ -224,7 +227,7 @@ final class CanvasView extends JComponent {
         g.fillRect(0, 0, getWidth(), getHeight());
         Node n = ed.node();
         if (n == null) {
-            Draw.label(g, "No node selected. Create one in the node library.", 20, 30, Draw.MUTED);
+            Draw.label(g, L10n.t("canvas.noNode"), 20, 30, Draw.MUTED);
             g.dispose();
             return;
         }
@@ -353,7 +356,7 @@ final class CanvasView extends JComponent {
             double cx = ox + (a.x + 0.5) * zoom, cy = oy + (a.y + 0.5) * zoom;
             Draw.arrow(g, cx, cy, a.dir, zoom, Draw.NAMED_ANCHOR, selA == i);
             if (zoom >= 6 || selA == i) {
-                String t = a.target.isEmpty() ? "(no target)" : a.target;
+                String t = a.target.isEmpty() ? L10n.t("canvas.noTarget") : a.target;
                 double unit = Math.max(zoom, 4) * 1.6;
                 double lx = cx - a.dir.dx * unit, ly = cy - a.dir.dy * unit;
                 Draw.label(g, t, lx + 4, ly + (a.dir.dy > 0 ? -4 : 12), Draw.NAMED_ANCHOR);

@@ -170,6 +170,12 @@ public final class Editor {
         return revision != savedRevision;
     }
 
+    /** Marks the project as changed since its last save, as when carrying unsaved work into a new window. */
+    public void markDirty() {
+        revision++;
+        fire(Change.FILE);
+    }
+
     public void markSaved(Path file) {
         this.file = file;
         savedRevision = revision;

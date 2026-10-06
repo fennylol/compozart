@@ -3,6 +3,7 @@ package compozart.io;
 import compozart.compose.Composition;
 import compozart.compose.Instance;
 import compozart.model.*;
+import compozart.text.L10n;
 
 import java.util.*;
 
@@ -32,7 +33,7 @@ public final class GodotScene {
      * @param pixelSize 3D units per pixel; ignored in 2D
      */
     public static String write(Composition c, Palette palette, boolean threeD, double pixelSize) {
-        if (c.root == null) throw new IllegalStateException("There is nothing to export: no root node is selected.");
+        if (c.root == null) throw new IllegalStateException(L10n.t("export.error.noRoot"));
         StringBuilder res = new StringBuilder();
         StringBuilder nodes = new StringBuilder();
 

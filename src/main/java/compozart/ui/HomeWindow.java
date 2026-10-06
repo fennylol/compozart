@@ -1,5 +1,7 @@
 package compozart.ui;
 
+import compozart.text.L10n;
+
 import compozart.compose.Composer;
 import compozart.compose.Composition;
 import compozart.io.ProjectIO;
@@ -39,7 +41,7 @@ public final class HomeWindow extends JFrame {
     private final DefaultListModel<Path> otherModel = new DefaultListModel<>();
     private final JList<Path> recentList = new JList<>(recentModel);
     private final JList<Path> otherList = new JList<>(otherModel);
-    private final JLabel recentEmpty = new JLabel("No recent projects yet.");
+    private final JLabel recentEmpty = new JLabel(L10n.t("home.recent.empty"));
     private final JLabel otherEmpty = new JLabel();
     /** Rendered thumbnails by path, filled in the background. */
     private final Map<Path, Icon> thumbs = new ConcurrentHashMap<>();
@@ -51,16 +53,16 @@ public final class HomeWindow extends JFrame {
 
         JLabel title = new JLabel("compozart");
         title.setFont(title.getFont().deriveFont(Font.BOLD, title.getFont().getSize2D() * 2f));
-        JLabel subtitle = new JLabel("Pixel art creatures, built from parts.");
+        JLabel subtitle = new JLabel(L10n.t("home.subtitle"));
         subtitle.setForeground(Draw.MUTED);
         JPanel titles = new JPanel(new GridLayout(2, 1));
         titles.setOpaque(false);
         titles.add(title);
         titles.add(subtitle);
 
-        JButton newButton = new JButton("New project", PixelIcon.of("new"));
+        JButton newButton = new JButton(L10n.t("action.file.new"), PixelIcon.of("new"));
         newButton.addActionListener(e -> openEditor(Project.createDefault(), null));
-        JButton openButton = new JButton("Open…");
+        JButton openButton = new JButton(L10n.t("action.file.open"));
         openButton.addActionListener(e -> browse());
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         buttons.setOpaque(false);
@@ -75,18 +77,18 @@ public final class HomeWindow extends JFrame {
         JPanel lists = new WidthTrackingPanel();
         lists.setLayout(new BoxLayout(lists, BoxLayout.Y_AXIS));
         lists.setBorder(BorderFactory.createEmptyBorder(0, 20, 12, 20));
-        lists.add(section("Recent", recentList, recentEmpty, true));
+        lists.add(section(L10n.t("home.recent"), recentList, recentEmpty, true));
         lists.add(Box.createVerticalStrut(14));
-        lists.add(section("In the compositions folder", otherList, otherEmpty, false));
+        lists.add(section(L10n.t("home.others"), otherList, otherEmpty, false));
         lists.add(Box.createVerticalGlue());
         JScrollPane scroll = new JScrollPane(lists, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         scroll.setBorder(null);
         scroll.getVerticalScrollBar().setUnitIncrement(16);
 
-        JLabel where = new JLabel("Compositions folder: " + compositions);
+        JLabel where = new JLabel(L10n.t("home.folder", "path", compositions));
         where.setForeground(Draw.MUTED);
-        JButton openFolder = new JButton("Open folder");
+        JButton openFolder = new JButton(L10n.t("home.openFolder"));
         openFolder.addActionListener(e -> openFolder());
         JPanel footer = new JPanel(new BorderLayout(8, 0));
         footer.setBorder(BorderFactory.createEmptyBorder(8, 20, 12, 20));
@@ -142,11 +144,11 @@ public final class HomeWindow extends JFrame {
                 if (i < 0 || !list.getCellBounds(i, i).contains(e.getPoint())) return;
                 list.setSelectedIndex(i);
                 JPopupMenu m = new JPopupMenu();
-                JMenuItem open = new JMenuItem("Open");
+                JMenuItem open = new JMenuItem(L10n.t("dialog.open.errorTitle"));
                 open.addActionListener(a -> openSelected(list));
                 m.add(open);
                 if (isRecent) {
-                    JMenuItem forget = new JMenuItem("Remove from recent");
+                    JMenuItem forget = new JMenuItem(L10n.t("home.forget"));
                     forget.addActionListener(a -> forgetSelected());
                     m.add(forget);
                 }
@@ -199,8 +201,7 @@ public final class HomeWindow extends JFrame {
         recentList.setVisible(!recentModel.isEmpty());
         recentEmpty.setVisible(recentModel.isEmpty());
         otherList.setVisible(!otherModel.isEmpty());
-        otherEmpty.setText(recentPaths.isEmpty() ? "No projects here yet. New projects are saved here by default."
-                : "No other projects here.");
+        otherEmpty.setText(recentPaths.isEmpty() ? L10n.t("home.others.empty") : L10n.t("home.others.none"));
         otherEmpty.setVisible(otherModel.isEmpty());
         if (!recentModel.isEmpty()) recentList.setSelectedIndex(0);
         else if (!otherModel.isEmpty()) otherList.setSelectedIndex(0);
@@ -287,8 +288,8 @@ public final class HomeWindow extends JFrame {
         try {
             openEditor(ProjectIO.load(p), p);
         } catch (IOException | RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Could not open " + p.getFileName() + ":\n" + ex.getMessage(),
-                    "Open", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, L10n.t("dialog.open.error", "file", p.getFileName(), "reason", ex.getMessage()),
+                    L10n.t("dialog.open.errorTitle"), JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -300,7 +301,7 @@ public final class HomeWindow extends JFrame {
     }
 
     private void browse() {
-        FileDialog fd = new FileDialog(this, "Open project", FileDialog.LOAD);
+        FileDialog fd = new FileDialog(this, L10n.t("dialog.open.title"), FileDialog.LOAD);
         fd.setDirectory(compositions.toString());
         fd.setFilenameFilter((dir, name) -> name.endsWith(ProjectIO.EXTENSION) || name.endsWith(ProjectIO.LEGACY_EXTENSION)
                 || new java.io.File(dir, name).isDirectory());
@@ -313,8 +314,8 @@ public final class HomeWindow extends JFrame {
         try {
             openEditor(ProjectIO.load(p), p);
         } catch (IOException | RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Could not open " + p.getFileName() + ":\n" + ex.getMessage(),
-                    "Open", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, L10n.t("dialog.open.error", "file", p.getFileName(), "reason", ex.getMessage()),
+                    L10n.t("dialog.open.errorTitle"), JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -334,7 +335,7 @@ public final class HomeWindow extends JFrame {
         } catch (IOException | RuntimeException ignored) {
             // fall through and show the path instead
         }
-        JOptionPane.showMessageDialog(this, "Projects are in:\n" + compositions, "Compositions", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, L10n.t("home.folder.text", "path", compositions), L10n.t("home.folder.title"), JOptionPane.INFORMATION_MESSAGE);
     }
 
     // ---- rendering ----
@@ -345,8 +346,8 @@ public final class HomeWindow extends JFrame {
     static String when(long millis) {
         LocalDateTime t = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(millis), ZoneId.systemDefault());
         LocalDate today = LocalDate.now();
-        if (t.toLocalDate().equals(today)) return "today " + TIME.format(t);
-        if (t.toLocalDate().equals(today.minusDays(1))) return "yesterday " + TIME.format(t);
+        if (t.toLocalDate().equals(today)) return L10n.t("home.today", "time", TIME.format(t));
+        if (t.toLocalDate().equals(today.minusDays(1))) return L10n.t("home.yesterday", "time", TIME.format(t));
         return DATE.format(t);
     }
 
