@@ -1,8 +1,8 @@
 # compozart
 
-*A pixel art creature composer that builds each creature from a tree of **nodes** joined at **anchors**.*
+*A pixel art composer that builds a drawing from a tree of **nodes** joined at **anchors**.*
 
-Each node is a small square canvas with a root anchor (the plug) and any number of named anchors (the sockets).
+Each node is a canvas with a root anchor (the plug) and any number of named anchors (the sockets).
 A node named "eye" attaches to every anchor named "eye", rotated and mirrored to fit.
 [SPEC.md](SPEC.md) describes the behavior in full.
 
@@ -59,3 +59,5 @@ The app rereads that file when its window regains focus.
 
 Projects save as `.zart` files, which are plain JSON.
 Exports are a flat indexed PNG, a zip of indexed PNGs with one per layer, or an indexed `.aseprite` file with one layer per creature layer.
+
+Created with Claude Opus 5.5
