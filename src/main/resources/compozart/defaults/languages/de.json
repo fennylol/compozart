@@ -310,7 +310,7 @@
     "help.eraser.anchors": "Rechtsklick oder Ziehen mit rechts löscht {anchor:other}.",
     "help.eraser.erase": "Ziehen, um Pixel zu löschen.",
     "help.eyedropper.alt": "Alt+Klick tut dasselbe mit jedem Zeichenwerkzeug.",
-    "help.eyedropper.pick": "Klicken oder ziehen, um die {color} unter dem Mauszeiger aufzunehmen.",
+    "help.eyedropper.pick": "Klicken oder ziehen, um die {color} unter dem Mauszeiger aufzunehmen und zum vorigen Werkzeug zurückzukehren.",
     "help.fill.clear": "Rechtsklick füllt transparent.",
     "help.fill.fill": "Klicken, um die zusammenhängende Fläche einer {color} zu füllen (oben, unten, links, rechts).",
     "help.line.drag": "Von einem Ende zum anderen ziehen.",

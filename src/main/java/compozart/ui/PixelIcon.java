@@ -20,7 +20,7 @@ final class PixelIcon implements Icon {
         return builtIn;
     }
 
-    private static String[] grid(String name) {
+    static String[] grid(String name) {
         String[] g = Appearance.get().icon(name);
         return g != null ? g : builtIn().get(name);
     }
@@ -84,7 +84,7 @@ final class PixelIcon implements Icon {
     private static final Map<Character, Color> DEFAULT_ACCENTS = Map.of(
             'p', new Color(0xf5c2e7), 'y', new Color(0xf9e2af), 'o', new Color(0xfab387), 'b', new Color(0x89b4fa),
             'g', new Color(0xa6e3a1), 's', new Color(0x89dceb), 'v', new Color(0xcba6f7), 'r', new Color(0xf38ba8),
-            'w', new Color(0xbac2de));
+            'w', new Color(0xbac2de), 'k', new Color(0x11111b));
 
     /** Every built-in grid must be 16 rows of 16 known characters. Used by the tests. */
     static void validate() {

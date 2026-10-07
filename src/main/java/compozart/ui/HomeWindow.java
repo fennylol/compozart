@@ -107,6 +107,7 @@ public final class HomeWindow extends JFrame {
         });
         refresh();
         setSize(820, 620);
+        AppIcon.apply(this);
         setLocationRelativeTo(null);
     }
 

@@ -237,10 +237,11 @@ The dividers between them can be dragged.
 The canvas view edits the selected node.
 
 - Integer zoom, pan, and an optional pixel grid.
-- Tools: draw, eraser, fill (4-connected), rectangle select and move, eyedropper, line, rectangle (outline or filled), anchor.
+- Tools: draw, eraser, fill (4-connected), rectangle select and move, color picker, line, rectangle (outline or filled), anchor.
 - Draw and eraser use a round brush, 1 to 32 pixels across. Size 1 is one pixel, 2 a square, 3 a plus; larger sizes are circles. Even sizes lean up and left of the cursor. A preview follows the cursor, mirrored by the symmetry mode and limited to pixels that can be painted. Draw previews in the selected color; the eraser, or the clear color, shows only the shape. A dark and light outline keeps the preview visible over any color, including low-alpha colors and colors that match the pixels underneath.
 - While a selection exists, draw, eraser, fill, line and rectangle only change pixels inside it, and fill stops at its edge. Anchors are not affected. Deselecting lifts the restriction.
 - Right-click paints clear with the line, rectangle and fill tools. Alt+click picks a color with any drawing tool.
+- After the color picker picks a color, the previous tool comes back when the mouse is released. A click outside the canvas picks nothing and keeps the picker.
 - The eraser's left button erases pixels only. Its right button erases anchors, the same way as the anchor tool's right button.
 - With the draw tool, right-click adds an anchor and Shift+right-click places the root anchor. Right-clicking a pixel that already has an anchor opens that anchor's menu.
 - A moved selection floats until you deselect, switch tools or switch nodes. Clear pixels in it do not overwrite.
@@ -346,6 +347,7 @@ Every action below can be rebound in Edit > Keyboard shortcuts, or by editing `s
 - `settings/icons.json` holds the toolbar icons as 16×16 grids, one string per row.
 - `.` is transparent, `#` the theme's text color, `m` a muted text color, and other letters take their color from the active theme's `icons` table.
 - An icon that is missing or malformed in the file uses the built-in one, and the problem is reported.
+- The `app` grid is the window and taskbar icon. It uses fixed Catppuccin Mocha colors so it looks the same under every theme.
 
 Both files are written from the built-in defaults when missing, and reread when the window regains focus.
 

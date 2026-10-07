@@ -39,6 +39,8 @@ final class CanvasView extends JComponent {
     private boolean stroking;
     private int strokeIndex;
     private Point last;
+    // a color picker stroke (not Alt+click) that picked a color returns to the previous tool on release
+    private boolean pickerStroke, picked;
     // line and rectangle
     private Point shapeStart, shapeEnd;
     private int shapeIndex;
@@ -405,7 +407,10 @@ final class CanvasView extends JComponent {
                 plot(List.of(p));
             }
             case FILL -> fill(p, secondary ? 0 : ed.color());
-            case EYEDROPPER -> pick(p);
+            case EYEDROPPER -> {
+                pickerStroke = ed.tool() == Tool.EYEDROPPER;
+                pick(p);
+            }
             case LINE, RECT -> {
                 shapeStart = shapeEnd = p;
                 shapeIndex = secondary ? 0 : ed.color();
@@ -461,6 +466,8 @@ final class CanvasView extends JComponent {
             return;
         }
         stroking = false;
+        if (pickerStroke && picked) ed.pickerDone();
+        pickerStroke = picked = false;
         if (shapeStart != null) {
             Node n = ed.node();
             List<Point> pts = shapePoints();
@@ -540,7 +547,9 @@ final class CanvasView extends JComponent {
 
     private void pick(Point p) {
         Node n = ed.node();
-        if (n != null && n.contains(p.x, p.y)) ed.selectColor(n.get(p.x, p.y));
+        if (n == null || !n.contains(p.x, p.y)) return;
+        ed.selectColor(n.get(p.x, p.y));
+        picked = true;
     }
 
     private List<Point> shapePoints() {

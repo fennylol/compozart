@@ -102,6 +102,7 @@ public final class MainWindow extends JFrame {
             }
         });
         setSize(1500, 920);
+        AppIcon.apply(this);
         setLocationRelativeTo(null);
         if (keyError != null) SwingUtilities.invokeLater(() -> status.setText(keyError));
         // Pick up edits made to settings.json in another program.
@@ -620,6 +621,24 @@ public final class MainWindow extends JFrame {
 
     // ---- export ----
 
+    /**
+     * Resizes the open dialog holding {@code c} to fit contents that changed after it opened.
+     * With {@code shrink} false it only grows, so small changes do not make it jump.
+     */
+    private static void fitDialog(Component c, boolean shrink) {
+        Window win = SwingUtilities.getWindowAncestor(c);
+        if (win == null || !win.isShowing()) return;
+        if (shrink) {
+            win.pack();
+            return;
+        }
+        Dimension pref = win.getPreferredSize(), size = win.getSize();
+        if (pref.width > size.width || pref.height > size.height) {
+            win.setSize(Math.max(pref.width, size.width), Math.max(pref.height, size.height));
+            win.validate();
+        }
+    }
+
     private void export() {
         ed.flush();
         Composition c = ed.composition();
@@ -665,9 +684,18 @@ public final class MainWindow extends JFrame {
             summary.setText(L10n.t("export.summary.image", "width", w, "height", h, "layers", layers,
                     "colors", L10n.plural("export.colors", ed.project().palette.size())));
         };
-        format.addActionListener(e -> update.run());
-        padding.addChangeListener(e -> update.run());
-        scale.addChangeListener(e -> update.run());
+        format.addActionListener(e -> {
+            update.run();
+            fitDialog(summary, true);
+        });
+        padding.addChangeListener(e -> {
+            update.run();
+            fitDialog(summary, false);
+        });
+        scale.addChangeListener(e -> {
+            update.run();
+            fitDialog(summary, false);
+        });
         update.run();
         JPanel form = NodeActions.form(new String[]{L10n.t("export.label.format"), L10n.t("export.label.padding"),
                         L10n.t("export.label.scale"), L10n.t("export.label.pixelSize"), ""},

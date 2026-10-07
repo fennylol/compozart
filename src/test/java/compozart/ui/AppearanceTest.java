@@ -46,7 +46,7 @@ public class AppearanceTest {
         List<String> problems = new ArrayList<>();
         Map<String, String[]> icons = Appearance.parseIcons(Appearance.defaultText(Appearance.ICONS), problems);
         eq(List.of(), problems);
-        eq(16, icons.size());
+        eq(17, icons.size()); // 16 toolbar icons and the app icon
         Map<String, String[]> user = Appearance.parseIcons("{\"icons\": {\"draw\": [\"#\"], \"new\": "
                 + "[" + "\"################\",".repeat(15) + "\"################\"]}}", problems);
         eq(1, user.size());

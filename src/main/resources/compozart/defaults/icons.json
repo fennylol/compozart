@@ -1,7 +1,25 @@
 {
-  "about": "Toolbar icons as 16x16 grids, one string per row. '.' is transparent, '#' the theme's text color, 'm' a muted text color, and the other letters are the icon colors in themes.json. Icons missing here use the built-in ones.",
+  "about": "Toolbar icons as 16x16 grids, one string per row. '.' is transparent, '#' the theme's text color, 'm' a muted text color, and the other letters are the icon colors in themes.json. Icons missing here use the built-in ones. \"app\" is the window and taskbar icon; it keeps its own colors in every theme.",
   "version": 1,
   "icons": {
+    "app": [
+      "................",
+      "...###....###...",
+      "..#kk##..#kk##..",
+      "..#kk##..#kk##..",
+      "...###bbbb###...",
+      "....bbbbbbbb....",
+      "...bbbbbbbbbb...",
+      "vv.bbbssssbbb.vv",
+      "vvvbbssssssbbvvv",
+      "...bbssssssbb...",
+      "...bbbssssbbb...",
+      "....bbbbbbbb....",
+      ".....bbbbbb.....",
+      ".......vv.......",
+      ".......vv.......",
+      ".......pp......."
+    ],
     "draw": [
       "................",
       "................",

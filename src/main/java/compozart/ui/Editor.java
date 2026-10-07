@@ -50,6 +50,8 @@ public final class Editor {
     /** 0 shows no parent; k shows candidate k - 1. */
     private int ghost;
     private Tool tool = Tool.DRAW;
+    /** The tool to return to after the color picker picks a color. */
+    private Tool beforePicker = Tool.DRAW;
     private int brushSize = 1;
     private Symmetry symmetry = Symmetry.NONE;
     private boolean rectFilled;
@@ -282,8 +284,14 @@ public final class Editor {
     public void setTool(Tool t) {
         if (t == tool) return;
         flush();
+        if (t == Tool.EYEDROPPER) beforePicker = tool;
         tool = t;
         fire(Change.TOOL);
+    }
+
+    /** Called when a color picker stroke ends having picked a color: returns to the tool used before it. */
+    public void pickerDone() {
+        if (tool == Tool.EYEDROPPER) setTool(beforePicker);
     }
 
     public int brushSize() {

@@ -40,7 +40,7 @@ New projects save there by default; Save As can put them anywhere.
 
 The settings files appear on first launch.
 They are plain JSON, and the app picks up edits when its window regains focus.
-`themes.json` holds the color themes (View > Theme switches them) and `icons.json` the toolbar icons as 16×16 text grids.
+`themes.json` holds the color themes (View > Theme switches them) and `icons.json` the toolbar icons and the app icon as 16×16 text grids.
 
 To translate the app, copy `settings/languages/en.template.json` to a file named after the language code, such as `de.json`, and translate its values.
 Shared words like "anchor" and "node" are defined once under `terms` and referenced as `{anchor}` or `{node:other}`, so each one is translated in one place.
